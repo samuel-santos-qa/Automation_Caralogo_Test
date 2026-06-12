@@ -1,0 +1,150 @@
+caralogo:
+  public_profile:
+    handle: "somerhad"
+
+  public_item:
+    name: "Obelisk Dragon"
+    slug: "obelisk-dragon"
+    public_id: "kqqzrcm871"
+    slug_with_public_id: "obelisk-dragon-kqqzrcm871"
+    brand_name: "Red Panda"
+    brand_slug: "red-panda"
+    status: "owned"
+    size: "large"
+    description: "Hugeee"
+    commercial_availability: "available"
+    origin: "imported"
+    rating: 4
+    cover_image_url: "/@somerhad/items/obelisk-dragon-kqqzrcm871/images/cover"
+    cover_image_width: 225
+    cover_image_height: 225
+    cover_image_sort_order: 0
+    cover_image_is_cover: true
+
+  public_filters:
+    valid_brand_slug: "red-panda"
+    invalid_brand_slug: "brand-inexistente-qa"
+    valid_category_slug: "figures"
+    invalid_category_slug: "category-inexistente-qa"
+    valid_collection_slug: "favorites"
+    invalid_collection_slug: "collection-inexistente-qa"
+    valid_tag_slug: "imported"
+    valid_tag_slugs: "123-edition,imported,limited-edition"
+    invalid_tag_slug: "tag-inexistente-qa"
+    expected_brand_name: "Red Panda"
+    expected_category_name: "Figures"
+    expected_collection_name: "Favorites"
+    expected_tag_names:
+      - "123 edition"
+      - "imported"
+      - "limited edition"
+    expected_tag_slugs:
+      - "123-edition"
+      - "imported"
+      - "limited-edition"
+
+  public_pagination:
+    valid_page: 1
+    valid_page_size: 24
+    invalid_queries:
+      - "page=abc"
+      - "pageSize=abc"
+      - "page=0"
+      - "pageSize=0"
+
+  public_measurement_filters:
+    valid_measurement_slug: "tip_to_knot_length"
+    valid_unit_cm: "cm"
+    valid_min_cm: 22
+    valid_max_cm: 23
+    valid_unit_mm: "mm"
+    valid_min_mm: 220
+    valid_max_mm: 230
+    out_of_range_unit: "cm"
+    out_of_range_min: 30
+    out_of_range_max: 40
+
+  share_item:
+    publicId: "igl74hl3zk"
+    slug: "share-like-test"
+    name: "Share Like Test"
+    brand:
+      name: "Red Panda"
+      slug: "red-panda"
+    category:
+      name: "Figures"
+      slug: "figures"
+    status: "owned"
+    commercialAvailability: "available"
+    origin: "imported"
+
+  field_visibility:
+    visible_item:
+      public_id: "yrxdmkjcgm"
+      slug: "teste-de-visibilidade-public"
+      slug_with_public_id: "teste-de-visibilidade-public-yrxdmkjcgm"
+      name: "Teste de visibilidade: Public"
+      description: "This description should be public"
+      rating: 5
+    hidden_item:
+      public_id: "bo4xgv89pd"
+      slug: "teste-de-visibilidade-private"
+      slug_with_public_id: "teste-de-visibilidade-private-bo4xgv89pd"
+      name: "Teste de visibilidade: Private"
+      hidden_fields:
+        - description
+        - rating
+
+  non_public_items:
+    item_names:
+      - "Visibility Private Catalog Test"
+      - "Visibility Unlisted Catalog Test"
+      - "Share Like Test"
+
+  invalid_public:
+    invalid_handle: "handle-inexistente-qa-999999"
+    invalid_item_slug: "item-inexistente-qa-999999"
+    invalid_share_token: "token-invalido-qa-999999"
+
+  expected_status:
+    success: 200
+    unauthorized:
+      - 401
+      - 403
+    unavailable:
+      - 400
+      - 404
+
+  forbidden_public_fields:
+    - privateNotes
+    - purchasePrice
+    - purchaseCurrency
+    - purchaseDate
+    - purchaseVendor
+    - purchaseLink
+    - purchaseNotes
+    - authProviderId
+    - profileId
+    - tokenHash
+    - storageProvider
+    - bucket
+    - storageKey
+    - password
+    - accessToken
+    - refreshToken
+    - authorization
+    - cookie
+    - private_notes
+    - purchase_price
+    - purchase_currency
+    - purchase_date
+    - purchase_vendor
+    - purchase_link
+    - purchase_notes
+    - auth_provider_id
+    - profile_id
+    - token_hash
+    - storage_provider
+    - storage_key
+    - access_token
+    - refresh_token
