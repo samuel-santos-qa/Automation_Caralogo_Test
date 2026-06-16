@@ -22,3 +22,31 @@ Funcionalidade: Filtros públicos por measurements
     Então devo receber status code 200
     E devo validar que o catálogo público retornou vazio
     E a resposta não deve expor campos proibidos
+
+  Cenário: Filtrar catálogo público por measurementSlug inexistente
+    Dado que eu tenha um handle público válido
+    Quando eu fizer uma requisição GET para a lista pública de itens filtrando por measurementSlug inexistente
+    Então devo receber status code 200
+    E devo validar que o catálogo público retornou vazio
+    E a resposta não deve expor campos proibidos
+
+  Cenário: Filtrar catálogo público por measurementUnit inválida
+    Dado que eu tenha um handle público válido
+    Quando eu fizer uma requisição GET para a lista pública de itens filtrando por measurementUnit inválida
+    Então devo receber status code 400
+    E devo validar a mensagem de erro para measurementUnit inválida
+    E a resposta não deve expor campos proibidos
+
+  Cenário: Filtrar catálogo público por measurementMin inválido
+    Dado que eu tenha um handle público válido
+    Quando eu fizer uma requisição GET para a lista pública de itens filtrando por measurementMin inválido
+    Então devo receber status code 200
+    E devo validar que o catálogo público retornou vazio
+    E a resposta não deve expor campos proibidos
+
+  Cenário: Filtrar catálogo público por measurementMax inválido
+    Dado que eu tenha um handle público válido
+    Quando eu fizer uma requisição GET para a lista pública de itens filtrando por measurementMax inválido
+    Então devo receber status code 200
+    E devo validar que o catálogo público retornou vazio
+    E a resposta não deve expor campos proibidos
