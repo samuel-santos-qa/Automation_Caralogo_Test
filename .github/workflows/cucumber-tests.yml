@@ -1,0 +1,74 @@
+name: Cucumber API Tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cucumber:
+    name: Run Cucumber tests
+    runs-on: windows-latest
+
+    env:
+      CARALOGO_SHARE_ITEM_TOKEN_VALIDO: ${{ secrets.CARALOGO_SHARE_ITEM_TOKEN_VALIDO }}
+      CARALOGO_SHARE_ITEM_TOKEN_REVOGADO: ${{ secrets.CARALOGO_SHARE_ITEM_TOKEN_REVOGADO }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+
+      - name: Show Ruby environment
+        shell: pwsh
+        run: |
+          ruby -v
+          gem -v
+          bundle -v
+
+      - name: Validate required secrets
+        shell: pwsh
+        run: |
+          $missingSecrets = @()
+
+          if ([string]::IsNullOrWhiteSpace($env:CARALOGO_SHARE_ITEM_TOKEN_VALIDO)) {
+            $missingSecrets += "CARALOGO_SHARE_ITEM_TOKEN_VALIDO"
+          }
+
+          if ([string]::IsNullOrWhiteSpace($env:CARALOGO_SHARE_ITEM_TOKEN_REVOGADO)) {
+            $missingSecrets += "CARALOGO_SHARE_ITEM_TOKEN_REVOGADO"
+          }
+
+          if ($missingSecrets.Count -gt 0) {
+            Write-Error "Configure os seguintes GitHub Secrets antes de executar a suite completa: $($missingSecrets -join ', ')"
+            exit 1
+          }
+
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          bundle config set path vendor/bundle
+          bundle install --jobs 4 --retry 3
+
+      - name: Run Cucumber tests
+        shell: pwsh
+        run: |
+          bundle exec cucumber 2>&1 | Tee-Object -FilePath cucumber.log
+          $exitCode = $LASTEXITCODE
+
+          "## Resultado Cucumber" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          Get-Content cucumber.log |
+            Select-String -Pattern "scenario|step" |
+            Select-Object -Last 5 |
+            ForEach-Object { "- $($_.Line)" } |
+            Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+
+          exit $exitCode
