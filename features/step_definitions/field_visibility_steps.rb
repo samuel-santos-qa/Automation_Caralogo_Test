@@ -94,7 +94,7 @@ Então('devo validar que o detalhe público contém description e rating') do
   body = @resposta_api.parsed_response
   item_data = visible_field_item_data
 
-  expect(body).to be_a(Hash)
+  expect(body).to be_a(Hash) # Validação de objeto 
   expect(body['publicId']).to eq(item_data.fetch('public_id'))
   expect(body['name']).to eq(item_data.fetch('name'))
   expect(body).to have_key('description')
