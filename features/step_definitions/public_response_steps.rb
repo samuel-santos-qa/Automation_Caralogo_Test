@@ -1,17 +1,21 @@
+# Lê os dados do perfil público usado como base nos cenários.
 def public_profile_data
   caralogo_data.fetch('public_profile')
 end
 
+# Lê os dados do item público usado nas validações de catálogo, detalhe e mídia.
 def public_item_data
   caralogo_data.fetch('public_item')
 end
 
+# Converte a resposta em JSON quando possível, mantendo body bruto para respostas não JSON.
 def parsed_response_body
   @resposta_api.parsed_response
 rescue JSON::ParserError
   @resposta_api.body
 end
 
+# Localiza o item base dentro de respostas paginadas do catálogo público.
 def public_item_from_catalog_response
   body = @resposta_api.parsed_response
   item_data = public_item_data
@@ -19,6 +23,7 @@ def public_item_from_catalog_response
   body.fetch('items').find { |item| item['publicId'] == item_data.fetch('public_id') }
 end
 
+# Varre Hashes, Arrays e Strings para detectar vazamento de campos proibidos em qualquer nível.
 def forbidden_fields_found(body, forbidden_fields)
   found = []
 
@@ -33,6 +38,7 @@ def forbidden_fields_found(body, forbidden_fields)
       found.concat(forbidden_fields_found(item, forbidden_fields))
     end
   when String
+    # Respostas não JSON também são verificadas para evitar vazamento em texto bruto.
     forbidden_fields.each do |field|
       found << field if body.include?(field)
     end
@@ -132,5 +138,6 @@ Então('a resposta não deve expor campos proibidos') do
   forbidden_fields = caralogo_data.fetch('forbidden_public_fields')
   found = forbidden_fields_found(parsed_response_body, forbidden_fields)
 
+  # A mesma validação cobre sucesso, erro seguro e respostas não JSON.
   expect(found).to be_empty, "Campos proibidos encontrados na resposta: #{found.join(', ')}"
 end

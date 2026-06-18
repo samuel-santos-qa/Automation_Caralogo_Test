@@ -1,13 +1,19 @@
-def share_item_token_from_env(env_name)
-  token = ENV[env_name]
-
-  if token.nil? || token.strip.empty?
-    raise "Variável de ambiente #{env_name} não configurada. Configure antes de rodar os testes de share item."
-  end
-
-  token
+# Lê os tokens de share controlados para o ambiente de staging.
+def share_tokens_data
+  caralogo_data.fetch('share_tokens')
 end
 
+# Retorna o token válido usado para acessar o item compartilhado controlado.
+def valid_share_item_token
+  share_tokens_data.fetch('valid_token')
+end
+
+# Retorna o token revogado usado para validar respostas seguras de negação.
+def revoked_share_item_token
+  share_tokens_data.fetch('revoked_token')
+end
+
+# O endpoint de share retorna um item direto, não uma lista paginada.
 def share_item_body
   body = @resposta_api.parsed_response
 
@@ -16,16 +22,19 @@ def share_item_body
   body
 end
 
+# Lê os dados esperados do item retornado pelo share link.
 def share_item_data
   caralogo_data.fetch('share_item')
 end
 
 Dado('que eu tenha um token válido de share item configurado') do
-  @share_item_token = share_item_token_from_env('CARALOGO_SHARE_ITEM_TOKEN_VALIDO')
+  # Token válido acessa apenas o item compartilhado controlado em staging.
+  @share_item_token = valid_share_item_token
 end
 
 Dado('que eu tenha um token revogado de share item configurado') do
-  @share_item_token = share_item_token_from_env('CARALOGO_SHARE_ITEM_TOKEN_REVOGADO')
+  # Token revogado valida negação segura sem usar autenticação.
+  @share_item_token = revoked_share_item_token
 end
 
 Quando('eu fizer uma requisição GET para o item compartilhado') do
@@ -48,6 +57,7 @@ Então('devo validar os dados públicos do item compartilhado') do
   body = share_item_body
   expected_item = share_item_data
 
+  # Valida somente campos definidos na massa de share, separada da massa do catálogo.
   expect(body['publicId']).to eq(expected_item.fetch('publicId'))
   expect(body['slug']).to eq(expected_item.fetch('slug'))
   expect(body['name']).to eq(expected_item.fetch('name'))
@@ -72,6 +82,7 @@ end
 Então('devo validar que a resposta contém uma imagem') do
   content_type = @resposta_api.headers['content-type']
 
+  # Share de mídia deve entregar binário de imagem, não JSON de erro.
   expect(content_type).not_to be_nil
   expect(content_type).to match(%r{\Aimage/})
   expect(@resposta_api.body).not_to be_empty

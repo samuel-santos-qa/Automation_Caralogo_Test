@@ -1,15 +1,19 @@
+# Lê a massa YAML dos itens usados para validar field visibility.
 def field_visibility_data
   caralogo_data.fetch('field_visibility')
 end
 
+# Lê o item de controle que deve expor campos públicos configurados como visíveis.
 def visible_field_item_data
   field_visibility_data.fetch('visible_item')
 end
 
+# Lê o item de controle que deve ocultar campos configurados como privados.
 def hidden_field_item_data
   field_visibility_data.fetch('hidden_item')
 end
 
+# Retorna itens da resposta atual após validar o contrato mínimo de catálogo paginado.
 def catalog_items_from_response
   body = @resposta_api.parsed_response
 
@@ -20,10 +24,12 @@ def catalog_items_from_response
   body['items']
 end
 
+# Busca um item específico na lista pública pelo publicId.
 def catalog_item_by_public_id(public_id)
   catalog_items_from_response.find { |item| item['publicId'] == public_id }
 end
 
+# Campos ocultos devem estar ausentes, não apenas com valor nil.
 def expect_fields_absent(hash, fields)
   fields.each do |field|
     expect(hash).not_to have_key(field), "Campo #{field} não deveria aparecer na resposta pública"

@@ -1,9 +1,11 @@
 require 'uri'
 
+# Lê a massa YAML de páginas válidas sintaticamente, mas fora do range.
 def public_pagination_out_of_range_data
   caralogo_data.fetch('public_pagination_out_of_range')
 end
 
+# Monta query string para páginas além do range sem transformar o caso em erro de sintaxe.
 def public_pagination_out_of_range_query(page, page_size)
   URI.encode_www_form(
     page: page,
@@ -11,6 +13,7 @@ def public_pagination_out_of_range_query(page, page_size)
   )
 end
 
+# Mesmo fora do range, a API deve manter o contrato de catálogo paginado.
 def public_pagination_out_of_range_body
   body = @resposta_api.parsed_response
 

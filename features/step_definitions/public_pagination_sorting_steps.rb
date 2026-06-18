@@ -1,9 +1,11 @@
 require 'uri'
 
+# Lê a massa YAML que combina paginação e ordenação por nome.
 def public_pagination_sorting_data
   caralogo_data.fetch('public_pagination_sorting')
 end
 
+# Monta query string reaproveitando a mesma ordenação para páginas diferentes.
 def public_pagination_sorting_query(page)
   data = public_pagination_sorting_data
 
@@ -15,6 +17,7 @@ def public_pagination_sorting_query(page)
   )
 end
 
+# Extrai itens de uma resposta específica após validar o contrato mínimo de catálogo.
 def public_pagination_sorting_items_from(response)
   body = response.parsed_response
 
@@ -25,6 +28,7 @@ def public_pagination_sorting_items_from(response)
   body['items']
 end
 
+# Retorna o body da resposta atual de paginação com ordenação.
 def public_pagination_sorting_body
   @resposta_api.parsed_response
 end
@@ -48,6 +52,7 @@ Quando('eu consultar as duas primeiras páginas do catálogo ordenado por nome c
   first_page_query = public_pagination_sorting_query(data.fetch('first_page'))
   second_page_query = public_pagination_sorting_query(data.fetch('second_page'))
 
+  # Mantém as duas respostas para validar ordenação preservada entre páginas.
   @primeira_pagina_ordenada = CaralogoApi.get("/@#{@public_handle}/items?#{first_page_query}")
   @segunda_pagina_ordenada = CaralogoApi.get("/@#{@public_handle}/items?#{second_page_query}")
 end
@@ -69,6 +74,7 @@ Então('devo validar os dados da segunda página ordenada') do
   body = public_pagination_sorting_body
   expected_second_page_items_count = data.fetch('expected_total_items') - data.fetch('page_size')
 
+  # Com pageSize 2 e total atual 3, a segunda página deve trazer o item restante.
   expect(body['page']).to eq(data.fetch('second_page'))
   expect(body['pageSize']).to eq(data.fetch('page_size'))
   expect(body['totalItems']).to eq(data.fetch('expected_total_items'))
@@ -99,6 +105,7 @@ end
 Então('a resposta não deve expor campos proibidos nas páginas consultadas') do
   forbidden_fields = caralogo_data.fetch('forbidden_public_fields')
 
+  # O cenário consulta duas páginas; ambas precisam passar pela mesma proteção de campos.
   [@primeira_pagina_ordenada, @segunda_pagina_ordenada].each do |response|
     forbidden = forbidden_fields_found(response.parsed_response, forbidden_fields)
     expect(forbidden).to be_empty

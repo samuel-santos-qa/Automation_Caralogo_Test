@@ -1,7 +1,9 @@
+# Lê a massa YAML dos filtros públicos de brand, category, collection e tags.
 def public_filters_data
   caralogo_data.fetch('public_filters')
 end
 
+# Monta o endpoint do catálogo público mantendo o handle e variando apenas a query.
 def public_items_endpoint_with_query(query)
   handle = public_profile_data.fetch('handle')
 
@@ -66,6 +68,8 @@ end
 
 Quando('eu fizer uma requisição GET para a lista pública de itens combinando filtros válidos') do
   filters = public_filters_data
+
+  # Combina filtros públicos na mesma query para validar interseção de critérios.
   query = [
     "brandSlug=#{filters.fetch('valid_brand_slug')}",
     "categorySlug=#{filters.fetch('valid_category_slug')}",
@@ -140,6 +144,7 @@ Então('devo validar que todos os itens retornados pertencem à category esperad
   expect(body['items']).not_to be_empty
 
   body['items'].each do |item|
+    # O resumo público pode omitir category; quando vier, precisa respeitar o filtro.
     next unless item.key?('category') && item['category'].is_a?(Hash)
 
     expect(item['category']['slug']).to eq(expected_category_slug)
@@ -155,6 +160,7 @@ Então('devo validar que todos os itens retornados pertencem à collection esper
   expect(body['items']).not_to be_empty
 
   body['items'].each do |item|
+    # A API pode representar collection como objeto único ou lista de collections.
     if item.key?('collection') && item['collection'].is_a?(Hash)
       expect(item['collection']['slug']).to eq(expected_collection_slug)
     elsif item.key?('collections') && item['collections'].is_a?(Array)
@@ -173,6 +179,7 @@ Então('devo validar que todos os itens retornados possuem a tag esperada quando
   expect(body['items']).not_to be_empty
 
   body['items'].each do |item|
+    # Tags também são opcionais no resumo; validamos apenas quando o campo existe.
     next unless item.key?('tags') && item['tags'].is_a?(Array)
 
     tag_slugs = item['tags'].map { |tag| tag['slug'] }
@@ -184,6 +191,7 @@ Então('devo validar que o catálogo público retornou vazio') do
   body = @resposta_api.parsed_response
   pagination = caralogo_data.fetch('public_pagination')
 
+  # Resposta vazia ainda deve preservar metadados de paginação padrão.
   expect(body).to be_a(Hash)
   expect(body).to have_key('items')
   expect(body['items']).to be_an(Array)

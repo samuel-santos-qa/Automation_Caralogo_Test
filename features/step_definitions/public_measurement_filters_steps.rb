@@ -1,9 +1,11 @@
 require 'uri'
 
+# Lê a massa YAML dos filtros públicos por measurements.
 def public_measurement_filters_data
   caralogo_data.fetch('public_measurement_filters')
 end
 
+# Monta query string com encoding seguro para filtros de measurements.
 def public_measurement_query(measurement_slug:, measurement_unit:, measurement_min:, measurement_max:)
   URI.encode_www_form(
     measurementSlug: measurement_slug,
@@ -108,6 +110,7 @@ Então('devo validar a mensagem de erro para measurementUnit inválida') do
   body = @resposta_api.parsed_response
   expected_message = public_measurement_filters_data.fetch('expected_invalid_unit_message')
 
+  # Valida trecho da mensagem para evitar acoplamento ao texto completo do backend.
   expect(body).to be_a(Hash)
   expect(body['statusCode']).to eq(400)
   expect(body['error']).to eq('Bad Request')

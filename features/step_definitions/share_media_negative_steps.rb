@@ -1,3 +1,4 @@
+# Lê a massa YAML dos cenários negativos de mídia via share.
 def share_media_negative_data
   caralogo_data.fetch('share_media_negative')
 end
@@ -26,6 +27,7 @@ Então('devo validar resposta genérica de mídia via share inexistente') do
   media_data = share_media_negative_data
   body = @resposta_api.parsed_response
 
+  # Erro seguro via share não deve diferenciar storage, token revogado ou mídia ausente.
   expect(body).to be_a(Hash)
   expect(body['message']).to eq(media_data.fetch('expected_message'))
   expect(body['statusCode']).to eq(media_data.fetch('expected_status_code'))
