@@ -97,7 +97,7 @@ Então('devo validar que o detalhe público contém description e rating') do
   expect(body).to be_a(Hash)
   expect(body['publicId']).to eq(item_data.fetch('public_id'))
   expect(body['name']).to eq(item_data.fetch('name'))
-  expect(body).to have_key('description')
+  expect(body).to have_key('descriptions')
   expect(body).to have_key('rating')
   expect(body['description']).to eq(item_data.fetch('description'))
   expect(body['rating']).to eq(item_data.fetch('rating'))
