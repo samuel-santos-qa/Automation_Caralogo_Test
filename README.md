@@ -41,16 +41,13 @@ A suíte valida os principais comportamentos públicos e seguros da API, incluin
 
 ## Segurança e dados sensíveis
 
-Tokens reais não são versionados neste projeto.
+Os tokens de share usados nesta suíte estão centralizados em `config/default_data.yaml` e pertencem exclusivamente ao ambiente de staging.
 
-O arquivo `.env` fica ignorado pelo Git, e o arquivo `.env.example` existe apenas como modelo para configuração local.
+Esses tokens não são tokens de autenticação, cookies, JWTs, API keys ou credenciais reais. O token válido é usado apenas para validar acesso a um item compartilhado controlado em staging, e o token revogado é usado para validar retorno seguro `404`.
 
-As variáveis de ambiente usadas nos testes de share são:
+O arquivo `.env` continua ignorado pelo Git para proteger eventuais configurações locais, mas no estado atual da suíte não é necessário exportar variáveis de ambiente para rodar os testes.
 
-- `CARALOGO_SHARE_ITEM_TOKEN_VALIDO`
-- `CARALOGO_SHARE_ITEM_TOKEN_REVOGADO`
-
-Esses valores devem ser configurados localmente e nunca devem ser compartilhados, expostos em logs ou commitados.
+Nenhum token de autenticação, cookie, JWT, API key ou credencial real deve ser versionado.
 
 ## Como configurar o projeto
 
@@ -60,14 +57,7 @@ Instale as dependências:
 bundle install
 ```
 
-Configure as variáveis de ambiente no Git Bash:
-
-```bash
-export CARALOGO_SHARE_ITEM_TOKEN_VALIDO="seu_token_valido"
-export CARALOGO_SHARE_ITEM_TOKEN_REVOGADO="seu_token_revogado"
-```
-
-Os tokens devem ser gerados no ambiente de staging e utilizados somente para execução local dos testes de share.
+Os dados de teste, incluindo tokens de share de staging, ficam centralizados em `config/default_data.yaml`.
 
 ## Como rodar os testes
 
@@ -122,7 +112,7 @@ services/
 - validação de ausência de campos proibidos;
 - cenários positivos e negativos;
 - proteção contra vazamento de dados privados;
-- uso de variáveis de ambiente para dados sensíveis.
+- separação entre massa pública de catálogo e massa de share.
 
 ## Observação
 

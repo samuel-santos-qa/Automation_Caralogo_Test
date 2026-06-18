@@ -1,14 +1,17 @@
 require 'time'
 require 'uri'
 
+# Lê a massa YAML de ordenação pública e mensagens de erro esperadas.
 def public_sorting_data
   caralogo_data.fetch('public_sorting')
 end
 
+# Monta query string com encoding seguro para parâmetros de ordenação.
 def public_sorting_query(params)
   URI.encode_www_form(params)
 end
 
+# Retorna itens da resposta atual após validar contrato mínimo e lista não vazia.
 def current_public_sorting_items
   body = @resposta_api.parsed_response
 
@@ -88,6 +91,7 @@ Então('devo validar que os itens foram ordenados por nome decrescente') do
 end
 
 Então('devo validar que os itens foram ordenados por data de publicação decrescente') do
+  # Time.parse evita comparar datas ISO como texto quando há timezone.
   published_dates = current_public_sorting_items.map { |item| Time.parse(item.fetch('publishedAt')) }
 
   expect(published_dates).to eq(published_dates.sort.reverse)
@@ -97,6 +101,7 @@ Então('devo validar a mensagem de erro para sort inválido') do
   body = @resposta_api.parsed_response
   expected_message = public_sorting_data.fetch('expected_invalid_sort_message')
 
+  # Valida trecho estável da mensagem para reduzir fragilidade do teste.
   expect(body).to be_a(Hash)
   expect(body['statusCode']).to eq(400)
   expect(body['error']).to eq('Bad Request')
@@ -108,6 +113,7 @@ Então('devo validar a mensagem de erro para direction inválida') do
   body = @resposta_api.parsed_response
   expected_message = public_sorting_data.fetch('expected_invalid_direction_message')
 
+  # Valida o contrato de erro sem depender da frase completa retornada pela API.
   expect(body).to be_a(Hash)
   expect(body['statusCode']).to eq(400)
   expect(body['error']).to eq('Bad Request')

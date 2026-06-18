@@ -110,6 +110,10 @@ caralogo:
     expected_status_code: 404
     expected_message: "Not Found"
 
+  share_tokens:
+    valid_token: "clg_sh_v1_nDXUyTpYLMyqEoVR3DDJxeJ0EVN_dMD6GwHjqhEK2Cg"
+    revoked_token: "clg_sh_v1_GGZFYIUeYfgdxRAxSD5N9UF6LQFe8Lauca6pygH3f9c"
+
   share_item:
     publicId: "igl74hl3zk"
     slug: "share-like-test"

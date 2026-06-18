@@ -15,6 +15,7 @@ end
 Então('a resposta deve ser uma imagem') do
   content_type = @resposta_api.headers['content-type']
 
+  # O endpoint de mídia deve retornar binário de imagem, não JSON de erro.
   expect(content_type).not_to be_nil
   expect(content_type).to match(%r{\Aimage/})
   expect(@resposta_api.body).not_to be_empty

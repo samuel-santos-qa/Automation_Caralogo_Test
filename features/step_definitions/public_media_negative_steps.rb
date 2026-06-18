@@ -1,3 +1,4 @@
+# Lê a massa YAML dos cenários negativos de mídia pública.
 def public_media_negative_data
   caralogo_data.fetch('public_media_negative')
 end
@@ -30,6 +31,7 @@ Então('devo validar resposta genérica de mídia pública inexistente') do
   media_data = public_media_negative_data
   body = @resposta_api.parsed_response
 
+  # Erro seguro de mídia inexistente não deve revelar detalhes internos de storage.
   expect(body).to be_a(Hash)
   expect(body['message']).to eq(media_data.fetch('expected_message'))
   expect(body['statusCode']).to eq(media_data.fetch('expected_status_code'))
