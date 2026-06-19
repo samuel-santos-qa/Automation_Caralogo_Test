@@ -40,9 +40,63 @@ jobs:
           bundle install --jobs 4 --retry 3
 
       - name: Run Cucumber tests
+        id: cucumber_tests
         shell: pwsh
         run: |
-          bundle exec cucumber
+          New-Item -ItemType Directory -Force reports | Out-Null
+
+          bundle exec cucumber --format pretty --format html --out reports/cucumber.html 2>&1 | Tee-Object -FilePath cucumber.log
+          $exitCode = $LASTEXITCODE
+
+          exit $exitCode
+
+      - name: Upload Cucumber HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cucumber-html-report
+          path: reports/cucumber.html
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Publish test summary
+        if: always()
+        shell: pwsh
+        env:
+          TEST_OUTCOME: ${{ steps.cucumber_tests.outcome }}
+        run: |
+          $scenarioLine = ""
+          $stepLine = ""
+
+          if (Test-Path cucumber.log) {
+            $scenarioLine = (Get-Content cucumber.log | Select-String -Pattern "scenarios" | Select-Object -Last 1).Line
+            $stepLine = (Get-Content cucumber.log | Select-String -Pattern "steps" | Select-Object -Last 1).Line
+          }
+
+          if ([string]::IsNullOrWhiteSpace($scenarioLine)) {
+            $scenarioLine = "Resumo de cenários não encontrado no log."
+          }
+
+          if ([string]::IsNullOrWhiteSpace($stepLine)) {
+            $stepLine = "Resumo de steps não encontrado no log."
+          }
+
+          "## Resultado da suíte Cucumber" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "**Status do job:** $env:TEST_OUTCOME" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "### Descrição" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "Suíte de automação backend desenvolvida com Ruby, Cucumber, HTTParty e RSpec para validar endpoints públicos da API Carálogo em ambiente de staging." | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "### Objetivo dos testes" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "Validar contrato de resposta, status codes, filtros, paginação, ordenação, mídia pública, share links e ausência de campos sensíveis em respostas públicas." | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "### Resumo da execução" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "- $scenarioLine" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "- $stepLine" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "### Artifact" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "O relatório HTML foi salvo no artifact chamado `cucumber-html-report`." | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
 
   auto_review:
     name: Auto review pull request
