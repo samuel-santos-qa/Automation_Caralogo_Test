@@ -1,1 +1,2 @@
-default: --require features/support --require features/step_definitions --publish-quiet
+default: --require features/support --require features/step_definitions --publish-quiet --tags "not @auth"
+auth: --require features/support --require features/step_definitions --publish-quiet --tags @auth
