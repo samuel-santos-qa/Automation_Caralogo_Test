@@ -1,5 +1,6 @@
 # language: pt
 
+@public
 Funcionalidade: Catálogo público
 
   Cenário: Consultar itens públicos de um perfil existente

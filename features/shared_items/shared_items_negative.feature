@@ -1,5 +1,6 @@
 # language: pt
 
+@public
 Funcionalidade: Share token inválido
 
   Cenário: Consultar item compartilhado com token inválido

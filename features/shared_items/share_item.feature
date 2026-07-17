@@ -1,5 +1,6 @@
 # language: pt
 
+@public
 Funcionalidade: Share público de item
 
   Cenário: Consultar item compartilhado com token válido

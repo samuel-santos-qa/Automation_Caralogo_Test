@@ -1,5 +1,6 @@
 # language: pt
 
+@public
 Funcionalidade: Public Catalog básico
 
   Cenário: Listar marcas públicas do catálogo de referência

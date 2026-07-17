@@ -1,5 +1,6 @@
 # language: pt
 
+@public
 Funcionalidade: Paginação pública fora do range
 
   Cenário: Consultar página imediatamente após a última página disponível

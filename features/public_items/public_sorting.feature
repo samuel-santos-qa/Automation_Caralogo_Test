@@ -1,5 +1,6 @@
 # language: pt
 
+@public
 Funcionalidade: Ordenação pública do catálogo
 
   Cenário: Ordenar catálogo público por nome crescente

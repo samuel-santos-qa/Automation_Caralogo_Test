@@ -20,7 +20,6 @@ module AuthSession
 
     # Obtém e mantém em memória um token QA válido sem expor credenciais ou token.
     def fetch_token!
-      ensure_auth_enabled!
       return @access_token if token_valid?
 
       validate_required_environment!
@@ -32,14 +31,6 @@ module AuthSession
     end
 
     private
-
-    # Impede o uso acidental da infraestrutura autenticada sem a flag explícita.
-    def ensure_auth_enabled!
-      return if ENV['CARALOGO_AUTH_ENABLED'] == 'true'
-
-      raise 'Autenticação QA desabilitada. Execute com: ' \
-            'CARALOGO_AUTH_ENABLED=true bundle exec cucumber -p auth'
-    end
 
     # Valida apenas a presença das configurações obrigatórias, sem incluir seus valores no erro.
     def validate_required_environment!

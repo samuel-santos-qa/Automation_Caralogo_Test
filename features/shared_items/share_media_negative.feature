@@ -1,5 +1,6 @@
 # language: pt
 
+@public
 Funcionalidade: Mídia negativa via share público
 
   Cenário: Consultar imagem via share com sortOrder inexistente

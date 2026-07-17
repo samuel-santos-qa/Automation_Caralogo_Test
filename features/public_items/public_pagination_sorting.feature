@@ -1,5 +1,6 @@
 # language: pt
 
+@public
 Funcionalidade: Paginação com ordenação pública do catálogo
 
   Cenário: Consultar primeira página do catálogo ordenado por nome crescente

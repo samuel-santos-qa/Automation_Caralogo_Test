@@ -1,5 +1,6 @@
 # language: pt
 
+@public
 Funcionalidade: Measurement definitions públicas
 
   Cenário: Consultar measurement definitions de perfil público existente

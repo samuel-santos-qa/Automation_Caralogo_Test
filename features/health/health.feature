@@ -1,5 +1,6 @@
 # language: pt
 
+@public
 Funcionalidade: Health da API Carálogo
 
   Cenário: Verificar se a API está saudável

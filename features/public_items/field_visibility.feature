@@ -1,5 +1,6 @@
 # language: pt
 
+@public
 Funcionalidade: Field visibility em rotas públicas
 
   Cenário: Validar que campos públicos aparecem na lista pública de itens

@@ -1,9 +1,6 @@
-# Faz uma requisição GET autenticada usando o token QA carregado pela AuthSession.
+# Faz uma requisição GET autenticada usando os headers injetados pelo hook @authenticated.
 def get_authenticated_endpoint(endpoint)
-  @resposta_api = CaralogoApi.get(
-    endpoint,
-    headers: AuthSession.auth_headers
-  )
+  @resposta_api = CaralogoApi.get(endpoint, request_options_with_headers)
 end
 
 # Lista os campos mínimos definidos pelo contrato OpenAPI do perfil autenticado.
@@ -53,10 +50,6 @@ def authenticated_profile_forbidden_fields_found(body, forbidden_fields)
   else
     []
   end.uniq
-end
-
-Dado('que eu tenha autenticação QA habilitada') do
-  AuthSession.fetch_token!
 end
 
 Quando('eu fizer uma requisição GET autenticada para o meu perfil') do

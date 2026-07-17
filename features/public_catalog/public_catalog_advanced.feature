@@ -1,5 +1,6 @@
 # language: pt
 
+@public
 Funcionalidade: Public Catalog avançado
 
   Cenário: Listar rankings públicos do catálogo de referência

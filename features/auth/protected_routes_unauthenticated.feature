@@ -1,5 +1,6 @@
 # language: pt
 
+@public
 Funcionalidade: Proteção de rotas autenticadas sem token
 
   Esquema do Cenário: Tentar acessar rota protegida sem autenticação

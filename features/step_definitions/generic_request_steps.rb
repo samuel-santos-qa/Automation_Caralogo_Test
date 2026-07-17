@@ -13,9 +13,9 @@ def invalid_public_data
   caralogo_data.fetch('invalid_public')
 end
 
-# Centraliza requisições GET públicas sem adicionar headers de autenticação.
+# Faz GET usando somente os headers definidos para o cenário atual.
 def get_endpoint(endpoint)
-  @resposta_api = CaralogoApi.get(endpoint)
+  @resposta_api = CaralogoApi.get(endpoint, request_options_with_headers)
 end
 
 Quando('eu fizer uma requisição GET para {string}') do |endpoint|

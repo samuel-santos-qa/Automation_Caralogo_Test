@@ -1,5 +1,6 @@
 # language: pt
 
+@public
 Funcionalidade: Paginação pública do catálogo
 
   Cenário: Consultar catálogo público com paginação válida
