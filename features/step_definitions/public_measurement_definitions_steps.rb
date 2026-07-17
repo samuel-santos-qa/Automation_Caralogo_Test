@@ -24,7 +24,7 @@ end
 def get_public_measurement_definitions_with_invalid_auth(endpoint)
   @resposta_api = CaralogoApi.get(
     endpoint,
-    headers: { 'Authorization' => 'Bearer invalid-token-qa' }
+    request_options_with_headers('Authorization' => 'Bearer invalid-token-qa')
   )
 end
 

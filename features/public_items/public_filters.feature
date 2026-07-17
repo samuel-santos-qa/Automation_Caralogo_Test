@@ -1,5 +1,6 @@
 # language: pt
 
+@public
 Funcionalidade: Filtros públicos do catálogo
 
   Cenário: Validar opções públicas de filtro

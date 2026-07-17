@@ -1,5 +1,6 @@
 # language: pt
 
+@public
 Funcionalidade: Mídia pública de item
 
   Cenário: Consultar imagem pública de capa de um item publicado

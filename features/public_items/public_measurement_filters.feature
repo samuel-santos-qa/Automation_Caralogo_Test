@@ -1,5 +1,6 @@
 # language: pt
 
+@public
 Funcionalidade: Filtros públicos por measurements
 
   Cenário: Filtrar catálogo público por measurement em centímetros

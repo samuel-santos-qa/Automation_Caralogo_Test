@@ -42,6 +42,10 @@ jobs:
       - name: Run Cucumber tests
         id: cucumber_tests
         shell: pwsh
+        env:
+          CARALOGO_QA_AUTH_SECRET: ${{ secrets.CARALOGO_QA_AUTH_SECRET }}
+          CARALOGO_QA_EMAIL: ${{ secrets.CARALOGO_QA_EMAIL }}
+          CARALOGO_QA_PASSWORD: ${{ secrets.CARALOGO_QA_PASSWORD }}
         run: |
           New-Item -ItemType Directory -Force reports | Out-Null
 

@@ -1,5 +1,6 @@
 # language: pt
 
+@public
 Funcionalidade: Rotas públicas inválidas
 
   Esquema do Cenário: Consultar rota pública inexistente de forma segura

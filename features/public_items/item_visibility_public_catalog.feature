@@ -1,5 +1,6 @@
 # language: pt
 
+@public
 Funcionalidade: Visibilidade de itens no catálogo público
 
   Cenário: Itens private e unlisted não devem aparecer na lista pública

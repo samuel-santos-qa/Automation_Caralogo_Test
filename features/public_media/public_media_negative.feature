@@ -1,5 +1,6 @@
 # language: pt
 
+@public
 Funcionalidade: Mídia pública inexistente
 
   Cenário: Consultar imagem pública com sortOrder inexistente

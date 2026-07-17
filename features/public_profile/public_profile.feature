@@ -1,5 +1,6 @@
 # language: pt
 
+@public
 Funcionalidade: Perfil público
 
   Cenário: Consultar perfil público existente
