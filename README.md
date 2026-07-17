@@ -45,7 +45,7 @@ Os tokens de share usados nesta suíte estão centralizados em `config/default_d
 
 Esses tokens não são tokens de autenticação, cookies, JWTs, API keys ou credenciais reais. O token válido é usado apenas para validar acesso a um item compartilhado controlado em staging, e o token revogado é usado para validar retorno seguro `404`.
 
-O arquivo `.env` continua ignorado pelo Git para proteger eventuais configurações locais, mas no estado atual da suíte não é necessário exportar variáveis de ambiente para rodar os testes.
+O arquivo `.env` é ignorado pelo Git e pode armazenar localmente as variáveis necessárias aos testes autenticados. No GitHub Actions, esses valores continuam sendo fornecidos por Repository Secrets.
 
 Nenhum token de autenticação, cookie, JWT, API key ou credencial real deve ser versionado.
 
@@ -58,6 +58,8 @@ bundle install
 ```
 
 Os dados de teste, incluindo tokens de share de staging, ficam centralizados em `config/default_data.yaml`.
+
+Para rodar testes autenticados localmente, copie `.env.example` para `.env` e preencha os valores reais fornecidos para staging. O arquivo `.env` é ignorado pelo Git e não deve ser commitado.
 
 ## Como rodar os testes
 

@@ -1,3 +1,8 @@
+require 'dotenv'
+
+env_file = File.expand_path('../../.env', __dir__)
+Dotenv.overload(env_file) if File.exist?(env_file)
+
 require 'rspec'
 require 'httparty'
 require 'yaml'
