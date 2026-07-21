@@ -93,9 +93,44 @@ Dado('que eu tenha o item autenticado controlado com imagem') do
   expect(@authenticated_owner_item_id.strip).not_to be_empty
 end
 
+Dado('que eu tenha uma imagem autenticada pronta desse item') do
+  get_authenticated_endpoint(
+    "/me/items/#{@authenticated_owner_item_id}/images"
+  )
+
+  expect(@resposta_api.code).to eq(200),
+                                 'Não foi possível consultar as imagens do item autenticado'
+
+  body = @resposta_api.parsed_response
+
+  expect(body).to be_a(Hash)
+  expect(body['items']).to be_an(Array)
+
+  selected_image = body['items'].find do |image|
+    image['processingStatus'] == 'ready'
+  end
+
+  expect(selected_image).not_to be_nil,
+                                'Nenhuma imagem pronta foi encontrada no item autenticado controlado'
+
+  expect(selected_image).to have_key('id'),
+                             'A imagem pronta não possui o campo obrigatório id'
+
+  @authenticated_owner_image_id = selected_image['id']
+
+  expect(@authenticated_owner_image_id).to be_a(String)
+  expect(@authenticated_owner_image_id.strip).not_to be_empty
+end
+
 Quando('eu consultar as imagens desse item autenticado') do
   get_authenticated_endpoint(
     "/me/items/#{@authenticated_owner_item_id}/images"
+  )
+end
+
+Quando('eu consultar o arquivo dessa imagem autenticada') do
+  get_authenticated_endpoint(
+    "/me/items/#{@authenticated_owner_item_id}/images/#{@authenticated_owner_image_id}/file"
   )
 end
 
@@ -167,4 +202,29 @@ Então('a resposta autenticada de imagens não deve expor campos internos proibi
 
   expect(found).to be_empty,
                    "Campos internos proibidos encontrados nas imagens: #{found.join(', ')}"
+end
+
+Então('devo validar que a resposta é uma imagem WebP autenticada') do
+  content_type = @resposta_api.headers['content-type']
+
+  expect(content_type).not_to be_nil,
+                              'Header Content-Type ausente na resposta da imagem autenticada'
+
+  expect(content_type).to start_with('image/webp'),
+                          "Content-Type inesperado para imagem autenticada: #{content_type}"
+end
+
+Então('devo validar que o arquivo da imagem autenticada não está vazio') do
+  expect(@resposta_api.body).not_to be_nil
+  expect(@resposta_api.body.bytesize).to be > 0
+end
+
+Então('devo validar o cache privado da imagem autenticada') do
+  cache_control = @resposta_api.headers['cache-control']
+
+  expect(cache_control).not_to be_nil,
+                                'Header Cache-Control ausente na resposta da imagem autenticada'
+
+  expect(cache_control).to include('private')
+  expect(cache_control).to include('max-age=300')
 end
