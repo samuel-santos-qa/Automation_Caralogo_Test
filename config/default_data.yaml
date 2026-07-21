@@ -18,7 +18,7 @@ caralogo:
     cover_image_url: "/@somerhad/items/obelisk-dragon-kqqzrcm871/images/cover"
     cover_image_width: 225
     cover_image_height: 225
-    cover_image_sort_order: 0
+    cover_image_sort_order: 1
     cover_image_is_cover: true
 
   public_filters:

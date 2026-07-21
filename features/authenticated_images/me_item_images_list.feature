@@ -11,3 +11,13 @@ Funcionalidade: Imagens de item autenticado
     E devo validar o contrato das imagens autenticadas retornadas
     E as imagens autenticadas devem estar na ordem esperada
     E a resposta autenticada de imagens não deve expor campos internos proibidos
+
+  Cenário: Validar contrato de uma imagem autenticada existente
+    Dado que eu tenha o item autenticado controlado com imagem
+    Quando eu consultar as imagens desse item autenticado
+    Então devo receber status code 200
+    E devo validar o contrato da lista de imagens autenticadas
+    E a lista de imagens autenticadas deve possuir pelo menos três imagens
+    E devo validar o contrato das imagens autenticadas retornadas
+    E as imagens autenticadas devem estar na ordem esperada
+    E a resposta autenticada de imagens não deve expor campos internos proibidos

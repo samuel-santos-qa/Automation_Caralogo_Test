@@ -63,6 +63,36 @@ def authenticated_owner_image_forbidden_fields_found(body, forbidden_fields)
   end.uniq
 end
 
+Dado('que eu tenha o item autenticado controlado com imagem') do
+  get_authenticated_endpoint('/me/items?page=1&pageSize=24')
+
+  expect(@resposta_api.code).to eq(200),
+                                 'Não foi possível consultar os itens autenticados'
+
+  body = @resposta_api.parsed_response
+
+  expect(body).to be_a(Hash)
+  expect(body['items']).to be_an(Array)
+
+  expected_item = public_item_data
+  expected_public_id = expected_item.fetch('public_id')
+
+  selected_item = body['items'].find do |item|
+    item['publicId'] == expected_public_id
+  end
+
+  expect(selected_item).not_to be_nil,
+                               'O item controlado com imagem não foi encontrado em /me/items'
+
+  expect(selected_item).to have_key('id'),
+                            'O item controlado não possui o campo obrigatório id'
+
+  @authenticated_owner_item_id = selected_item['id']
+
+  expect(@authenticated_owner_item_id).to be_a(String)
+  expect(@authenticated_owner_item_id.strip).not_to be_empty
+end
+
 Quando('eu consultar as imagens desse item autenticado') do
   get_authenticated_endpoint(
     "/me/items/#{@authenticated_owner_item_id}/images"
@@ -75,6 +105,13 @@ Então('devo validar o contrato da lista de imagens autenticadas') do
   expect(body).to be_a(Hash)
   expect(body).to have_key('items')
   expect(body['items']).to be_an(Array)
+end
+
+Então('a lista de imagens autenticadas deve possuir pelo menos três imagens') do
+  images = @resposta_api.parsed_response.fetch('items')
+
+  expect(images.length).to be >= 3,
+                           'O item controlado deve possuir pelo menos três imagens para validar a ordenação'
 end
 
 Então('devo validar o contrato das imagens autenticadas retornadas') do
