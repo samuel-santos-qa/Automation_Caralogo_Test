@@ -687,6 +687,12 @@ Quando('eu consultar o detalhe desse produto autenticado por id') do
   )
 end
 
+Quando('eu consultar o detalhe desse produto autenticado por slug') do
+  get_authenticated_endpoint(
+    "/catalog/products/#{@authenticated_catalog_product_slug}?measurementUnit=inch"
+  )
+end
+
 Quando('eu consultar o detalhe dessa variante autenticada') do
   get_authenticated_endpoint(
     "/catalog/products/by-id/#{@authenticated_catalog_product_id}/variants/#{@authenticated_catalog_variant_size_normalized}?measurementUnit=inch"
@@ -871,6 +877,18 @@ Então('o detalhe autenticado deve corresponder ao produto selecionado') do
 
   expect(product['slug']).to eq(@authenticated_catalog_product_slug),
                               'O slug do detalhe não corresponde ao produto selecionado'
+end
+
+Então('o detalhe autenticado por slug deve corresponder ao produto selecionado') do
+  product = @resposta_api.parsed_response
+
+  expect(product).to be_a(Hash)
+
+  expect(product['id']).to eq(@authenticated_catalog_product_id),
+                            'A consulta por slug retornou um produto diferente do selecionado'
+
+  expect(product['slug']).to eq(@authenticated_catalog_product_slug),
+                              'O slug retornado não corresponde ao produto selecionado'
 end
 
 Então('devo validar o contrato do produto autenticado detalhado') do
