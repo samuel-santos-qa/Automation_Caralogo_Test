@@ -13,6 +13,18 @@ def authenticated_catalog_product_list_required_fields
   ]
 end
 
+# Lista os campos obrigatórios da resposta paginada de rankings.
+def authenticated_catalog_ranking_list_required_fields
+  %w[
+    page
+    pageSize
+    totalItems
+    totalPages
+    summary
+    items
+  ]
+end
+
 # Lista os campos obrigatórios do resumo global do catálogo.
 def authenticated_catalog_summary_required_fields
   %w[
@@ -78,6 +90,31 @@ def authenticated_catalog_suggestion_required_fields
     importableFields
     sourceType
     confidenceLevel
+  ]
+end
+
+# Lista os campos obrigatórios de um item de ranking.
+def authenticated_catalog_ranking_item_required_fields
+  %w[
+    product
+    variant
+    ranking
+  ]
+end
+
+# Lista os campos obrigatórios dos metadados de ranking.
+def authenticated_catalog_ranking_required_fields
+  %w[
+    metricKey
+    value
+    valueKind
+    sourceValue
+    unit
+    sourceMeasurementKey
+    rank
+    variantId
+    variantSizeLabel
+    displayLabel
   ]
 end
 
@@ -238,6 +275,23 @@ def authenticated_catalog_product_forbidden_fields_found(body, forbidden_fields)
   else
     []
   end.uniq
+end
+
+# Valida o contrato do resumo global do catálogo.
+def validate_authenticated_catalog_summary_contract(summary, context)
+  expect(summary).to be_a(Hash),
+                     "#{context} deve ser um objeto"
+
+  authenticated_catalog_summary_required_fields.each do |field|
+    expect(summary).to have_key(field),
+                       "Campo obrigatório ausente em #{context}: #{field}"
+
+    expect(summary[field]).to be_a(Integer),
+                              "Campo #{field} de #{context} deve ser inteiro"
+
+    expect(summary[field]).to be >= 0,
+                              "Campo #{field} de #{context} não pode ser negativo"
+  end
 end
 
 # Valida o contrato comum de um produto resumido ou detalhado do catálogo.
@@ -449,6 +503,79 @@ def validate_authenticated_catalog_product_variant_contract(
   end
 end
 
+# Valida os metadados de um ranking retornado pelo catálogo.
+def validate_authenticated_catalog_ranking_contract(ranking, context)
+  expect(ranking).to be_a(Hash),
+                     "#{context} deve ser um objeto"
+
+  authenticated_catalog_ranking_required_fields.each do |field|
+    expect(ranking).to have_key(field),
+                       "Campo obrigatório ausente em #{context}: #{field}"
+  end
+
+  expect(ranking['metricKey']).to be_a(String),
+                                  "Campo metricKey de #{context} deve ser String"
+
+  expect(ranking['metricKey']).to eq('totalLength'),
+                                  "#{context} deveria usar a métrica totalLength"
+
+  expect(ranking['value']).to be_a(Numeric),
+                              "Campo value de #{context} deve ser numérico quando onlyWithRankingValue=true"
+
+  expect(
+    %w[measurement diameterEquivalent]
+  ).to include(ranking['valueKind']),
+       "valueKind inválido em #{context}"
+
+  unless ranking['sourceValue'].nil?
+    expect(ranking['sourceValue']).to be_a(Numeric),
+                                      "Campo sourceValue de #{context} deve ser nil ou numérico"
+  end
+
+  expect(%w[inch cm]).to include(ranking['unit']),
+                          "Unit inválida em #{context}"
+
+  expect(ranking['unit']).to eq('inch'),
+                             "#{context} deveria respeitar measurementUnit=inch"
+
+  unless ranking['sourceMeasurementKey'].nil?
+    expect(ranking['sourceMeasurementKey']).to be_a(String),
+                                               "Campo sourceMeasurementKey de #{context} deve ser nil ou String"
+
+    expect(ranking['sourceMeasurementKey'].strip).not_to be_empty,
+                                                     "Campo sourceMeasurementKey de #{context} não pode ser vazio"
+  end
+
+  unless ranking['rank'].nil?
+    expect(ranking['rank']).to be_a(Integer),
+                                "Campo rank de #{context} deve ser nil ou inteiro"
+
+    expect(ranking['rank']).to be >= 1,
+                                "Campo rank de #{context} deve ser positivo"
+  end
+
+  unless ranking['variantId'].nil?
+    expect(
+      authenticated_catalog_product_uuid?(ranking['variantId'])
+    ).to be(true),
+         "Campo variantId de #{context} deve ser nil ou UUID válido"
+  end
+
+  unless ranking['variantSizeLabel'].nil?
+    expect(ranking['variantSizeLabel']).to be_a(String),
+                                           "Campo variantSizeLabel de #{context} deve ser nil ou String"
+
+    expect(ranking['variantSizeLabel'].strip).not_to be_empty,
+                                                 "Campo variantSizeLabel de #{context} não pode ser vazio"
+  end
+
+  expect(ranking['displayLabel']).to be_a(String),
+                                     "Campo displayLabel de #{context} deve ser String"
+
+  expect(ranking['displayLabel'].strip).not_to be_empty,
+                                           "Campo displayLabel de #{context} não pode ser vazio"
+end
+
 Dado('que eu tenha um produto autenticado do catálogo com variante disponível') do
   get_authenticated_endpoint('/catalog/products?page=1&pageSize=10')
 
@@ -575,6 +702,12 @@ Quando('eu solicitar sugestões autenticadas para esse produto') do
   get_authenticated_endpoint("/catalog/suggest?#{query}")
 end
 
+Quando('eu consultar o ranking autenticado de produtos por comprimento total') do
+  get_authenticated_endpoint(
+    '/catalog/rankings?page=1&pageSize=10&measurementUnit=inch&rankingMetric=totalLength&rankingMode=product&rankingDirection=desc&onlyWithRankingValue=true'
+  )
+end
+
 Então('devo validar a paginação da lista autenticada de produtos') do
   body = @resposta_api.parsed_response
 
@@ -604,18 +737,110 @@ end
 Então('devo validar o resumo da lista autenticada de produtos') do
   summary = @resposta_api.parsed_response.fetch('summary')
 
-  expect(summary).to be_a(Hash)
+  validate_authenticated_catalog_summary_contract(
+    summary,
+    'resumo da lista autenticada de produtos'
+  )
+end
 
-  authenticated_catalog_summary_required_fields.each do |field|
-    expect(summary).to have_key(field),
-                        "Campo obrigatório ausente no resumo do catálogo: #{field}"
+Então('devo validar a paginação da lista autenticada de rankings') do
+  body = @resposta_api.parsed_response
 
-    expect(summary[field]).to be_a(Integer),
-                              "Campo #{field} do resumo deve ser inteiro"
+  expect(body).to be_a(Hash)
 
-    expect(summary[field]).to be >= 0,
-                              "Campo #{field} do resumo não pode ser negativo"
+  authenticated_catalog_ranking_list_required_fields.each do |field|
+    expect(body).to have_key(field),
+                    "Campo obrigatório ausente na lista autenticada de rankings: #{field}"
   end
+
+  expect(body['page']).to be_a(Integer)
+  expect(body['page']).to eq(1)
+
+  expect(body['pageSize']).to be_a(Integer)
+  expect(body['pageSize']).to eq(10)
+
+  expect(body['totalItems']).to be_a(Integer)
+  expect(body['totalItems']).to be >= 0
+
+  expect(body['totalPages']).to be_a(Integer)
+  expect(body['totalPages']).to be >= 0
+
+  expect(body['items']).to be_an(Array)
+  expect(body['items'].length).to be <= body['pageSize']
+end
+
+Então('devo validar o resumo da lista autenticada de rankings') do
+  summary = @resposta_api.parsed_response.fetch('summary')
+
+  validate_authenticated_catalog_summary_contract(
+    summary,
+    'resumo da lista autenticada de rankings'
+  )
+end
+
+Então('a lista autenticada de rankings não deve estar vazia') do
+  ranking_items = @resposta_api.parsed_response.fetch('items')
+
+  expect(ranking_items).not_to be_empty,
+                               'Nenhum resultado com valor de ranking foi retornado'
+end
+
+Então('devo validar o contrato dos rankings autenticados retornados') do
+  ranking_items = @resposta_api.parsed_response.fetch('items')
+
+  ranking_items.each_with_index do |ranking_item, index|
+    expect(ranking_item).to be_a(Hash),
+                             "Item de ranking #{index} deve ser um objeto"
+
+    authenticated_catalog_ranking_item_required_fields.each do |field|
+      expect(ranking_item).to have_key(field),
+                               "Campo obrigatório ausente no item de ranking #{index}: #{field}"
+    end
+
+    validate_authenticated_catalog_product_common_contract(
+      ranking_item['product'],
+      "produto do ranking #{index}"
+    )
+
+    unless ranking_item['variant'].nil?
+      validate_authenticated_catalog_product_variant_contract(
+        ranking_item['variant'],
+        "variante do ranking #{index}"
+      )
+    end
+
+    validate_authenticated_catalog_ranking_contract(
+      ranking_item['ranking'],
+      "metadados do ranking #{index}"
+    )
+  end
+end
+
+Então('os rankings autenticados devem estar ordenados do maior para o menor') do
+  ranking_items = @resposta_api.parsed_response.fetch('items')
+
+  values = ranking_items.map do |ranking_item|
+    ranking_item.fetch('ranking').fetch('value')
+  end
+
+  expect(values).to all(be_a(Numeric)),
+                    'Todos os valores do ranking devem ser numéricos'
+
+  expect(values).to eq(values.sort.reverse),
+                    'Os rankings não estão ordenados do maior para o menor'
+end
+
+Então('a resposta autenticada de rankings não deve expor campos administrativos internos') do
+  body = @resposta_api.parsed_response
+  forbidden_fields = authenticated_catalog_product_forbidden_fields
+
+  found = authenticated_catalog_product_forbidden_fields_found(
+    body,
+    forbidden_fields
+  )
+
+  expect(found).to be_empty,
+                   "Campos administrativos proibidos encontrados nos rankings: #{found.join(', ')}"
 end
 
 Então('a lista autenticada de produtos não deve estar vazia') do
