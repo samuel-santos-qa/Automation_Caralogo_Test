@@ -468,6 +468,40 @@ Dado('que eu tenha um produto autenticado do catálogo com variante disponível'
   expect(@authenticated_catalog_product_slug.strip).not_to be_empty
 end
 
+Dado('que eu tenha uma variante autenticada selecionada desse produto') do
+  get_authenticated_endpoint(
+    "/catalog/products/by-id/#{@authenticated_catalog_product_id}?measurementUnit=inch"
+  )
+
+  expect(@resposta_api.code).to eq(200),
+                                 'Não foi possível consultar o detalhe do produto autenticado'
+
+  product = @resposta_api.parsed_response
+
+  expect(product).to be_a(Hash)
+  expect(product).to have_key('variants')
+  expect(product['variants']).to be_an(Array)
+
+  selected_variant = product['variants'].find do |variant|
+    variant.is_a?(Hash) &&
+      variant['id'].is_a?(String) &&
+      !variant['id'].strip.empty? &&
+      variant['sizeNormalized'].is_a?(String) &&
+      !variant['sizeNormalized'].strip.empty?
+  end
+
+  expect(selected_variant).not_to be_nil,
+                                  'Nenhuma variante válida foi encontrada no produto selecionado'
+
+  expect(
+    authenticated_catalog_product_uuid?(selected_variant['id'])
+  ).to be(true),
+       'A variante selecionada não possui um UUID válido'
+
+  @authenticated_catalog_variant_id = selected_variant['id']
+  @authenticated_catalog_variant_size_normalized = selected_variant['sizeNormalized']
+end
+
 Quando('eu consultar os produtos do catálogo autenticado') do
   get_authenticated_endpoint('/catalog/products?page=1&pageSize=10')
 end
@@ -475,6 +509,12 @@ end
 Quando('eu consultar o detalhe desse produto autenticado por id') do
   get_authenticated_endpoint(
     "/catalog/products/by-id/#{@authenticated_catalog_product_id}?measurementUnit=inch"
+  )
+end
+
+Quando('eu consultar o detalhe dessa variante autenticada') do
+  get_authenticated_endpoint(
+    "/catalog/products/by-id/#{@authenticated_catalog_product_id}/variants/#{@authenticated_catalog_variant_size_normalized}?measurementUnit=inch"
   )
 end
 
@@ -620,4 +660,40 @@ Então('a resposta autenticada de detalhe não deve expor campos administrativos
 
   expect(found).to be_empty,
                    "Campos administrativos proibidos encontrados no detalhe: #{found.join(', ')}"
+end
+
+Então('o detalhe da variante autenticada deve corresponder à variante selecionada') do
+  variant = @resposta_api.parsed_response
+
+  expect(variant).to be_a(Hash)
+
+  expect(variant['id']).to eq(@authenticated_catalog_variant_id),
+                            'O endpoint retornou uma variante diferente da selecionada'
+
+  expect(
+    variant['sizeNormalized']
+  ).to eq(@authenticated_catalog_variant_size_normalized),
+       'O tamanho normalizado retornado não corresponde à variante selecionada'
+end
+
+Então('devo validar o contrato da variante autenticada detalhada') do
+  variant = @resposta_api.parsed_response
+
+  validate_authenticated_catalog_product_variant_contract(
+    variant,
+    'variante detalhada'
+  )
+end
+
+Então('a resposta autenticada da variante não deve expor campos administrativos internos') do
+  body = @resposta_api.parsed_response
+  forbidden_fields = authenticated_catalog_product_forbidden_fields
+
+  found = authenticated_catalog_product_forbidden_fields_found(
+    body,
+    forbidden_fields
+  )
+
+  expect(found).to be_empty,
+                   "Campos administrativos proibidos encontrados na variante: #{found.join(', ')}"
 end
