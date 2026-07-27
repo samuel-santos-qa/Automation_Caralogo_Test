@@ -43,6 +43,31 @@ def authenticated_catalog_product_required_fields
   ]
 end
 
+# Lista os campos adicionais obrigatórios do detalhe de produto.
+def authenticated_catalog_product_detail_required_fields
+  %w[
+    sourceName
+    sourceUrl
+    notes
+    variants
+  ]
+end
+
+# Lista os campos obrigatórios de uma variante do catálogo.
+def authenticated_catalog_product_variant_required_fields
+  %w[
+    id
+    sizeLabel
+    sizeNormalized
+    measurementUnit
+    measurements
+    summary
+    flags
+    sourceType
+    confidenceLevel
+  ]
+end
+
 # Confirma o formato estrutural de UUID sem limitar uma versão específica.
 def authenticated_catalog_product_uuid?(value)
   value.is_a?(String) &&
@@ -167,6 +192,15 @@ def authenticated_catalog_product_forbidden_fields
   ]
 end
 
+# Lista campos administrativos proibidos no detalhe do produto.
+def authenticated_catalog_product_detail_forbidden_fields
+  authenticated_catalog_product_forbidden_fields - %w[
+    sourceName
+    sourceUrl
+    notes
+  ]
+end
+
 # Varre recursivamente apenas chaves para localizar campos administrativos proibidos.
 def authenticated_catalog_product_forbidden_fields_found(body, forbidden_fields)
   case body
@@ -193,8 +227,255 @@ def authenticated_catalog_product_forbidden_fields_found(body, forbidden_fields)
   end.uniq
 end
 
+# Valida o contrato comum de um produto resumido ou detalhado do catálogo.
+def validate_authenticated_catalog_product_common_contract(product, context)
+  expect(product).to be_a(Hash),
+                     "#{context} deve ser um objeto"
+
+  authenticated_catalog_product_required_fields.each do |field|
+    expect(product).to have_key(field),
+                       "Campo obrigatório ausente em #{context}: #{field}"
+  end
+
+  expect(authenticated_catalog_product_uuid?(product['id'])).to be(true),
+                                                                "Campo id de #{context} deve ser um UUID válido"
+
+  %w[slug name displayName].each do |field|
+    expect(product[field]).to be_a(String),
+                               "Campo #{field} de #{context} deve ser String"
+    expect(product[field].strip).not_to be_empty,
+                                     "Campo #{field} de #{context} não pode ser vazio"
+  end
+
+  expect(product['aliases']).to be_an(Array),
+                                "Campo aliases de #{context} deve ser Array"
+
+  product['aliases'].each_with_index do |alias_name, alias_index|
+    expect(alias_name).to be_a(String),
+                          "Alias #{alias_index} de #{context} deve ser String"
+    expect(alias_name.strip).not_to be_empty,
+                                "Alias #{alias_index} de #{context} não pode ser vazio"
+  end
+
+  unless product['category'].nil?
+    expect(product['category']).to be_a(String),
+                                      "Campo category de #{context} deve ser nil ou String"
+    expect(product['category'].strip).not_to be_empty,
+                                            "Campo category de #{context} não pode ser vazio"
+  end
+
+  expect(
+    authenticated_catalog_product_commercial_availability_values
+  ).to include(product['commercialAvailability']),
+       "commercialAvailability inválido em #{context}"
+
+  expect(
+    authenticated_catalog_product_source_type_values
+  ).to include(product['sourceType']),
+       "sourceType inválido em #{context}"
+
+  expect(
+    authenticated_catalog_product_confidence_level_values
+  ).to include(product['confidenceLevel']),
+       "confidenceLevel inválido em #{context}"
+
+  expect(product['variantCount']).to be_a(Integer),
+                                     "Campo variantCount de #{context} deve ser inteiro"
+  expect(product['variantCount']).to be >= 0,
+                                     "Campo variantCount de #{context} não pode ser negativo"
+
+  expect(product['sizes']).to be_an(Array),
+                                "Campo sizes de #{context} deve ser Array"
+
+  product['sizes'].each_with_index do |size, size_index|
+    expect(size).to be_a(String),
+                    "Size #{size_index} de #{context} deve ser String"
+    expect(size.strip).not_to be_empty,
+                          "Size #{size_index} de #{context} não pode ser vazio"
+  end
+
+  brand = product['brand']
+  expect(brand).to be_a(Hash),
+                   "Campo brand de #{context} deve ser um objeto"
+
+  authenticated_catalog_product_brand_required_fields.each do |field|
+    expect(brand).to have_key(field),
+                         "Campo obrigatório ausente na marca de #{context}: #{field}"
+  end
+
+  expect(authenticated_catalog_product_uuid?(brand['id'])).to be(true),
+                                                              "Campo id da marca de #{context} deve ser um UUID válido"
+
+  %w[name slug status].each do |field|
+    expect(brand[field]).to be_a(String),
+                               "Campo #{field} da marca de #{context} deve ser String"
+    expect(brand[field].strip).not_to be_empty,
+                                     "Campo #{field} da marca de #{context} não pode ser vazio"
+  end
+
+  expect(brand['aliases']).to be_an(Array),
+                                "Campo aliases da marca de #{context} deve ser Array"
+
+  brand['aliases'].each_with_index do |alias_name, alias_index|
+    expect(alias_name).to be_a(String),
+                          "Alias #{alias_index} da marca de #{context} deve ser String"
+    expect(alias_name.strip).not_to be_empty,
+                                "Alias #{alias_index} da marca de #{context} não pode ser vazio"
+  end
+
+  unless brand['website'].nil?
+    expect(brand['website']).to be_a(String),
+                                    "Campo website da marca de #{context} deve ser nil ou String"
+    expect(brand['website'].strip).not_to be_empty,
+                                          "Campo website da marca de #{context} não pode ser vazio"
+  end
+
+  %w[createdAt updatedAt].each do |field|
+    expect(authenticated_catalog_product_datetime?(brand[field])).to be(true),
+                                                                       "Campo #{field} da marca de #{context} deve ser um date-time válido"
+  end
+
+  summary = product['summary']
+  expect(summary).to be_a(Hash),
+                     "Campo summary de #{context} deve ser um objeto"
+
+  authenticated_catalog_product_measurement_summary_required_fields.each do |field|
+    expect(summary).to have_key(field),
+                        "Campo obrigatório ausente no summary de #{context}: #{field}"
+
+    next if summary[field].nil?
+
+    expect(summary[field]).to be_a(Numeric),
+                              "Campo #{field} do summary de #{context} deve ser nil ou numérico"
+  end
+
+  flags = product['flags']
+  expect(flags).to be_a(Hash),
+                   "Campo flags de #{context} deve ser um objeto"
+
+  authenticated_catalog_product_flag_required_fields.each do |field|
+    expect(flags).to have_key(field),
+                      "Campo obrigatório ausente nas flags de #{context}: #{field}"
+    expect([true, false]).to include(flags[field]),
+                                "Campo #{field} das flags de #{context} deve ser booleano"
+  end
+end
+
+# Valida o contrato de uma variante retornada no detalhe do produto.
+def validate_authenticated_catalog_product_variant_contract(variant, context)
+  expect(variant).to be_a(Hash),
+                     "#{context} deve ser um objeto"
+
+  authenticated_catalog_product_variant_required_fields.each do |field|
+    expect(variant).to have_key(field),
+                           "Campo obrigatório ausente em #{context}: #{field}"
+  end
+
+  expect(authenticated_catalog_product_uuid?(variant['id'])).to be(true),
+                                                               "Campo id de #{context} deve ser um UUID válido"
+
+  %w[sizeLabel sizeNormalized].each do |field|
+    expect(variant[field]).to be_a(String),
+                               "Campo #{field} de #{context} deve ser String"
+
+    expect(variant[field].strip).not_to be_empty,
+                                     "Campo #{field} de #{context} não pode ser vazio"
+  end
+
+  expect(%w[inch cm]).to include(variant['measurementUnit']),
+                          "measurementUnit inválido em #{context}"
+
+  expect(variant['measurementUnit']).to eq('inch'),
+                                       "#{context} deveria respeitar measurementUnit=inch"
+
+  expect(variant['measurements']).to be_a(Hash),
+                                    "Campo measurements de #{context} deve ser um objeto"
+
+  expect(
+    authenticated_catalog_product_source_type_values
+  ).to include(variant['sourceType']),
+       "sourceType inválido em #{context}"
+
+  expect(
+    authenticated_catalog_product_confidence_level_values
+  ).to include(variant['confidenceLevel']),
+       "confidenceLevel inválido em #{context}"
+
+  summary = variant['summary']
+
+  expect(summary).to be_a(Hash),
+                     "Campo summary de #{context} deve ser um objeto"
+
+  authenticated_catalog_product_measurement_summary_required_fields.each do |field|
+    expect(summary).to have_key(field),
+                        "Campo obrigatório ausente no summary de #{context}: #{field}"
+
+    next if summary[field].nil?
+
+    expect(summary[field]).to be_a(Numeric),
+                              "Campo #{field} do summary de #{context} deve ser nil ou numérico"
+  end
+
+  flags = variant['flags']
+
+  expect(flags).to be_a(Hash),
+                   "Campo flags de #{context} deve ser um objeto"
+
+  authenticated_catalog_product_flag_required_fields.each do |field|
+    expect(flags).to have_key(field),
+                      "Campo obrigatório ausente nas flags de #{context}: #{field}"
+
+    expect([true, false]).to include(flags[field]),
+                                "Campo #{field} das flags de #{context} deve ser booleano"
+  end
+end
+
+Dado('que eu tenha um produto autenticado do catálogo com variante disponível') do
+  get_authenticated_endpoint('/catalog/products?page=1&pageSize=10')
+
+  expect(@resposta_api.code).to eq(200),
+                                 'Não foi possível consultar os produtos do catálogo autenticado'
+
+  body = @resposta_api.parsed_response
+
+  expect(body).to be_a(Hash)
+  expect(body['items']).to be_an(Array)
+
+  selected_product = body['items'].find do |product|
+    product['variantCount'].is_a?(Integer) &&
+      product['variantCount'].positive?
+  end
+
+  expect(selected_product).not_to be_nil,
+                                  'Nenhum produto com variante disponível foi encontrado na primeira página'
+
+  expect(selected_product).to have_key('id'),
+                               'O produto selecionado não possui o campo obrigatório id'
+
+  expect(selected_product).to have_key('slug'),
+                               'O produto selecionado não possui o campo obrigatório slug'
+
+  @authenticated_catalog_product_id = selected_product['id']
+  @authenticated_catalog_product_slug = selected_product['slug']
+  @authenticated_catalog_product_variant_count = selected_product['variantCount']
+
+  expect(
+    authenticated_catalog_product_uuid?(@authenticated_catalog_product_id)
+  ).to be(true),
+       'O produto selecionado não possui um UUID válido'
+
+  expect(@authenticated_catalog_product_slug).to be_a(String)
+  expect(@authenticated_catalog_product_slug.strip).not_to be_empty
+end
+
 Quando('eu consultar os produtos do catálogo autenticado') do
   get_authenticated_endpoint('/catalog/products?page=1&pageSize=10')
+end
+
+Quando('eu consultar o detalhe desse produto autenticado por id') do
+  get_authenticated_endpoint(
+    "/catalog/products/by-id/#{@authenticated_catalog_product_id}?measurementUnit=inch"
+  )
 end
 
 Então('devo validar a paginação da lista autenticada de produtos') do
@@ -251,136 +532,67 @@ Então('devo validar o contrato dos produtos autenticados retornados') do
   products = @resposta_api.parsed_response.fetch('items')
 
   products.each_with_index do |product, index|
-    expect(product).to be_a(Hash),
-                           "Produto #{index} deve ser um objeto"
+    validate_authenticated_catalog_product_common_contract(
+      product,
+      "produto #{index}"
+    )
+  end
+end
 
-    authenticated_catalog_product_required_fields.each do |field|
-      expect(product).to have_key(field),
-                             "Campo obrigatório ausente no produto #{index}: #{field}"
-    end
+Então('o detalhe autenticado deve corresponder ao produto selecionado') do
+  product = @resposta_api.parsed_response
 
-    expect(authenticated_catalog_product_uuid?(product['id'])).to be(true),
-                                                                  "Campo id do produto #{index} deve ser um UUID válido"
+  expect(product).to be_a(Hash)
 
-    %w[slug name displayName].each do |field|
-      expect(product[field]).to be_a(String),
-                                   "Campo #{field} do produto #{index} deve ser String"
-      expect(product[field].strip).not_to be_empty,
-                                         "Campo #{field} do produto #{index} não pode ser vazio"
-    end
+  expect(product['id']).to eq(@authenticated_catalog_product_id),
+                            'O detalhe retornou um produto diferente do selecionado'
 
-    expect(product['aliases']).to be_an(Array),
-                                    "Campo aliases do produto #{index} deve ser Array"
+  expect(product['slug']).to eq(@authenticated_catalog_product_slug),
+                              'O slug do detalhe não corresponde ao produto selecionado'
+end
 
-    product['aliases'].each_with_index do |alias_name, alias_index|
-      expect(alias_name).to be_a(String),
-                            "Alias #{alias_index} do produto #{index} deve ser String"
-      expect(alias_name.strip).not_to be_empty,
-                                  "Alias #{alias_index} do produto #{index} não pode ser vazio"
-    end
+Então('devo validar o contrato do produto autenticado detalhado') do
+  product = @resposta_api.parsed_response
 
-    unless product['category'].nil?
-      expect(product['category']).to be_a(String),
-                                        "Campo category do produto #{index} deve ser nil ou String"
-      expect(product['category'].strip).not_to be_empty,
-                                              "Campo category do produto #{index} não pode ser vazio"
-    end
+  validate_authenticated_catalog_product_common_contract(
+    product,
+    'produto detalhado'
+  )
 
-    expect(
-      authenticated_catalog_product_commercial_availability_values
-    ).to include(product['commercialAvailability']),
-         "commercialAvailability inválido no produto #{index}"
+  authenticated_catalog_product_detail_required_fields.each do |field|
+    expect(product).to have_key(field),
+                       "Campo obrigatório ausente no produto detalhado: #{field}"
+  end
 
-    expect(
-      authenticated_catalog_product_source_type_values
-    ).to include(product['sourceType']),
-         "sourceType inválido no produto #{index}"
+  %w[sourceName sourceUrl notes].each do |field|
+    next if product[field].nil?
 
-    expect(
-      authenticated_catalog_product_confidence_level_values
-    ).to include(product['confidenceLevel']),
-         "confidenceLevel inválido no produto #{index}"
+    expect(product[field]).to be_a(String),
+                               "Campo #{field} do produto detalhado deve ser nil ou String"
 
-    expect(product['variantCount']).to be_a(Integer),
-                                       "Campo variantCount do produto #{index} deve ser inteiro"
-    expect(product['variantCount']).to be >= 0,
-                                       "Campo variantCount do produto #{index} não pode ser negativo"
+    expect(product[field].strip).not_to be_empty,
+                                     "Campo #{field} do produto detalhado não pode ser vazio"
+  end
 
-    expect(product['sizes']).to be_an(Array),
-                                  "Campo sizes do produto #{index} deve ser Array"
+  expect(product['variants']).to be_an(Array),
+                                'Campo variants do produto detalhado deve ser Array'
+end
 
-    product['sizes'].each_with_index do |size, size_index|
-      expect(size).to be_a(String),
-                      "Size #{size_index} do produto #{index} deve ser String"
-      expect(size.strip).not_to be_empty,
-                            "Size #{size_index} do produto #{index} não pode ser vazio"
-    end
+Então('a lista de variantes do produto autenticado não deve estar vazia') do
+  variants = @resposta_api.parsed_response.fetch('variants')
 
-    brand = product['brand']
-    expect(brand).to be_a(Hash),
-                     "Campo brand do produto #{index} deve ser um objeto"
+  expect(variants).not_to be_empty,
+                          'O produto selecionado deveria possuir pelo menos uma variante'
+end
 
-    authenticated_catalog_product_brand_required_fields.each do |field|
-      expect(brand).to have_key(field),
-                           "Campo obrigatório ausente na marca do produto #{index}: #{field}"
-    end
+Então('devo validar o contrato das variantes autenticadas retornadas') do
+  variants = @resposta_api.parsed_response.fetch('variants')
 
-    expect(authenticated_catalog_product_uuid?(brand['id'])).to be(true),
-                                                                "Campo id da marca do produto #{index} deve ser um UUID válido"
-
-    %w[name slug status].each do |field|
-      expect(brand[field]).to be_a(String),
-                                 "Campo #{field} da marca do produto #{index} deve ser String"
-      expect(brand[field].strip).not_to be_empty,
-                                       "Campo #{field} da marca do produto #{index} não pode ser vazio"
-    end
-
-    expect(brand['aliases']).to be_an(Array),
-                                  "Campo aliases da marca do produto #{index} deve ser Array"
-
-    brand['aliases'].each_with_index do |alias_name, alias_index|
-      expect(alias_name).to be_a(String),
-                            "Alias #{alias_index} da marca do produto #{index} deve ser String"
-      expect(alias_name.strip).not_to be_empty,
-                                  "Alias #{alias_index} da marca do produto #{index} não pode ser vazio"
-    end
-
-    unless brand['website'].nil?
-      expect(brand['website']).to be_a(String),
-                                      "Campo website da marca do produto #{index} deve ser nil ou String"
-      expect(brand['website'].strip).not_to be_empty,
-                                            "Campo website da marca do produto #{index} não pode ser vazio"
-    end
-
-    %w[createdAt updatedAt].each do |field|
-      expect(authenticated_catalog_product_datetime?(brand[field])).to be(true),
-                                                                         "Campo #{field} da marca do produto #{index} deve ser um date-time válido"
-    end
-
-    summary = product['summary']
-    expect(summary).to be_a(Hash),
-                       "Campo summary do produto #{index} deve ser um objeto"
-
-    authenticated_catalog_product_measurement_summary_required_fields.each do |field|
-      expect(summary).to have_key(field),
-                          "Campo obrigatório ausente no summary do produto #{index}: #{field}"
-
-      next if summary[field].nil?
-
-      expect(summary[field]).to be_a(Numeric),
-                                "Campo #{field} do summary do produto #{index} deve ser nil ou numérico"
-    end
-
-    flags = product['flags']
-    expect(flags).to be_a(Hash),
-                     "Campo flags do produto #{index} deve ser um objeto"
-
-    authenticated_catalog_product_flag_required_fields.each do |field|
-      expect(flags).to have_key(field),
-                        "Campo obrigatório ausente nas flags do produto #{index}: #{field}"
-      expect([true, false]).to include(flags[field]),
-                                  "Campo #{field} das flags do produto #{index} deve ser booleano"
-    end
+  variants.each_with_index do |variant, index|
+    validate_authenticated_catalog_product_variant_contract(
+      variant,
+      "variante #{index}"
+    )
   end
 end
 
@@ -395,4 +607,17 @@ Então('a resposta autenticada de produtos não deve expor campos administrativo
 
   expect(found).to be_empty,
                    "Campos administrativos proibidos encontrados: #{found.join(', ')}"
+end
+
+Então('a resposta autenticada de detalhe não deve expor campos administrativos internos') do
+  body = @resposta_api.parsed_response
+  forbidden_fields = authenticated_catalog_product_detail_forbidden_fields
+
+  found = authenticated_catalog_product_forbidden_fields_found(
+    body,
+    forbidden_fields
+  )
+
+  expect(found).to be_empty,
+                   "Campos administrativos proibidos encontrados no detalhe: #{found.join(', ')}"
 end
