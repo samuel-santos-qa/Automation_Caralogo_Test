@@ -1,4 +1,5 @@
 require 'time'
+require 'uri'
 
 # Lista os campos obrigatórios da resposta paginada de produtos.
 def authenticated_catalog_product_list_required_fields
@@ -63,6 +64,18 @@ def authenticated_catalog_product_variant_required_fields
     measurements
     summary
     flags
+    sourceType
+    confidenceLevel
+  ]
+end
+
+# Lista os campos obrigatórios de uma sugestão do catálogo.
+def authenticated_catalog_suggestion_required_fields
+  %w[
+    product
+    variant
+    score
+    importableFields
     sourceType
     confidenceLevel
   ]
@@ -362,7 +375,11 @@ def validate_authenticated_catalog_product_common_contract(product, context)
 end
 
 # Valida o contrato de uma variante retornada no detalhe do produto.
-def validate_authenticated_catalog_product_variant_contract(variant, context)
+def validate_authenticated_catalog_product_variant_contract(
+  variant,
+  context,
+  expected_measurement_unit: 'inch'
+)
   expect(variant).to be_a(Hash),
                      "#{context} deve ser um objeto"
 
@@ -385,8 +402,10 @@ def validate_authenticated_catalog_product_variant_contract(variant, context)
   expect(%w[inch cm]).to include(variant['measurementUnit']),
                           "measurementUnit inválido em #{context}"
 
-  expect(variant['measurementUnit']).to eq('inch'),
-                                       "#{context} deveria respeitar measurementUnit=inch"
+  unless expected_measurement_unit.nil?
+    expect(variant['measurementUnit']).to eq(expected_measurement_unit),
+                                         "#{context} deveria respeitar measurementUnit=#{expected_measurement_unit}"
+  end
 
   expect(variant['measurements']).to be_a(Hash),
                                     "Campo measurements de #{context} deve ser um objeto"
@@ -502,6 +521,35 @@ Dado('que eu tenha uma variante autenticada selecionada desse produto') do
   @authenticated_catalog_variant_size_normalized = selected_variant['sizeNormalized']
 end
 
+Dado('que eu tenha dados conhecidos de um produto para sugestão autenticada') do
+  get_authenticated_endpoint('/catalog/products?page=1&pageSize=10')
+
+  expect(@resposta_api.code).to eq(200),
+                                 'Não foi possível consultar os produtos do catálogo autenticado'
+
+  body = @resposta_api.parsed_response
+
+  expect(body).to be_a(Hash)
+  expect(body['items']).to be_an(Array)
+
+  selected_product = body['items'].find do |product|
+    product.is_a?(Hash) &&
+      authenticated_catalog_product_uuid?(product['id']) &&
+      product['name'].is_a?(String) &&
+      !product['name'].strip.empty? &&
+      product['brand'].is_a?(Hash) &&
+      product['brand']['name'].is_a?(String) &&
+      !product['brand']['name'].strip.empty?
+  end
+
+  expect(selected_product).not_to be_nil,
+                                  'Nenhum produto válido foi encontrado para testar sugestões'
+
+  @authenticated_catalog_suggest_product_id = selected_product['id']
+  @authenticated_catalog_suggest_product_name = selected_product['name']
+  @authenticated_catalog_suggest_brand_name = selected_product['brand']['name']
+end
+
 Quando('eu consultar os produtos do catálogo autenticado') do
   get_authenticated_endpoint('/catalog/products?page=1&pageSize=10')
 end
@@ -516,6 +564,15 @@ Quando('eu consultar o detalhe dessa variante autenticada') do
   get_authenticated_endpoint(
     "/catalog/products/by-id/#{@authenticated_catalog_product_id}/variants/#{@authenticated_catalog_variant_size_normalized}?measurementUnit=inch"
   )
+end
+
+Quando('eu solicitar sugestões autenticadas para esse produto') do
+  query = URI.encode_www_form(
+    brand: @authenticated_catalog_suggest_brand_name,
+    name: @authenticated_catalog_suggest_product_name
+  )
+
+  get_authenticated_endpoint("/catalog/suggest?#{query}")
 end
 
 Então('devo validar a paginação da lista autenticada de produtos') do
@@ -696,4 +753,96 @@ Então('a resposta autenticada da variante não deve expor campos administrativo
 
   expect(found).to be_empty,
                    "Campos administrativos proibidos encontrados na variante: #{found.join(', ')}"
+end
+
+Então('devo validar o contrato da lista autenticada de sugestões') do
+  body = @resposta_api.parsed_response
+
+  expect(body).to be_a(Hash)
+  expect(body).to have_key('items')
+  expect(body['items']).to be_an(Array)
+end
+
+Então('a lista autenticada de sugestões não deve estar vazia') do
+  suggestions = @resposta_api.parsed_response.fetch('items')
+
+  expect(suggestions).not_to be_empty,
+                              'Nenhuma sugestão foi retornada para o produto conhecido'
+end
+
+Então('devo validar o contrato das sugestões autenticadas retornadas') do
+  suggestions = @resposta_api.parsed_response.fetch('items')
+
+  suggestions.each_with_index do |suggestion, index|
+    expect(suggestion).to be_a(Hash),
+                           "Sugestão #{index} deve ser um objeto"
+
+    authenticated_catalog_suggestion_required_fields.each do |field|
+      expect(suggestion).to have_key(field),
+                              "Campo obrigatório ausente na sugestão #{index}: #{field}"
+    end
+
+    validate_authenticated_catalog_product_common_contract(
+      suggestion['product'],
+      "produto da sugestão #{index}"
+    )
+
+    unless suggestion['variant'].nil?
+      validate_authenticated_catalog_product_variant_contract(
+        suggestion['variant'],
+        "variante da sugestão #{index}",
+        expected_measurement_unit: nil
+      )
+    end
+
+    expect(suggestion['score']).to be_a(Numeric),
+                                    "Campo score da sugestão #{index} deve ser numérico"
+
+    expect(suggestion['importableFields']).to be_an(Array),
+                                               "Campo importableFields da sugestão #{index} deve ser Array"
+
+    suggestion['importableFields'].each_with_index do |field, field_index|
+      expect(field).to be_a(String),
+                           "Campo importável #{field_index} da sugestão #{index} deve ser String"
+
+      expect(field.strip).not_to be_empty,
+                                "Campo importável #{field_index} da sugestão #{index} não pode ser vazio"
+    end
+
+    expect(
+      authenticated_catalog_product_source_type_values
+    ).to include(suggestion['sourceType']),
+         "sourceType inválido na sugestão #{index}"
+
+    expect(
+      authenticated_catalog_product_confidence_level_values
+    ).to include(suggestion['confidenceLevel']),
+         "confidenceLevel inválido na sugestão #{index}"
+  end
+end
+
+Então('a sugestão autenticada deve incluir o produto usado na busca') do
+  suggestions = @resposta_api.parsed_response.fetch('items')
+
+  matching_suggestion = suggestions.find do |suggestion|
+    suggestion.is_a?(Hash) &&
+      suggestion['product'].is_a?(Hash) &&
+      suggestion['product']['id'] == @authenticated_catalog_suggest_product_id
+  end
+
+  expect(matching_suggestion).not_to be_nil,
+                                     'O produto conhecido utilizado na busca não apareceu nas sugestões'
+end
+
+Então('a resposta autenticada de sugestões não deve expor campos administrativos internos') do
+  body = @resposta_api.parsed_response
+  forbidden_fields = authenticated_catalog_product_forbidden_fields
+
+  found = authenticated_catalog_product_forbidden_fields_found(
+    body,
+    forbidden_fields
+  )
+
+  expect(found).to be_empty,
+                   "Campos administrativos proibidos encontrados nas sugestões: #{found.join(', ')}"
 end
