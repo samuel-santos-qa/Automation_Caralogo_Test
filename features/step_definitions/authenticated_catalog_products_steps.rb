@@ -731,6 +731,31 @@ Dado('que eu tenha uma disponibilidade comercial autenticada existente') do
     selected_product['commercialAvailability']
 end
 
+Dado('que eu tenha um nível de confiança autenticado existente') do
+  get_authenticated_endpoint('/catalog/products?page=1&pageSize=10')
+
+  expect(@resposta_api.code).to eq(200),
+                                 'Não foi possível consultar os produtos do catálogo autenticado'
+
+  body = @resposta_api.parsed_response
+
+  expect(body).to be_a(Hash)
+  expect(body['items']).to be_an(Array)
+
+  selected_product = body['items'].find do |product|
+    product.is_a?(Hash) &&
+      authenticated_catalog_product_confidence_level_values.include?(
+        product['confidenceLevel']
+      )
+  end
+
+  expect(selected_product).not_to be_nil,
+                                  'Nenhum produto com nível de confiança válido foi encontrado'
+
+  @authenticated_catalog_confidence_level =
+    selected_product['confidenceLevel']
+end
+
 Quando('eu consultar os produtos do catálogo autenticado') do
   get_authenticated_endpoint('/catalog/products?page=1&pageSize=10')
 end
@@ -752,6 +777,16 @@ Quando('eu consultar os produtos autenticados dessa disponibilidade comercial') 
     page: 1,
     pageSize: 10,
     commercialAvailability: @authenticated_catalog_commercial_availability
+  )
+
+  get_authenticated_endpoint("/catalog/products?#{query}")
+end
+
+Quando('eu consultar os produtos autenticados desse nível de confiança') do
+  query = URI.encode_www_form(
+    page: 1,
+    pageSize: 10,
+    confidenceLevel: @authenticated_catalog_confidence_level
   )
 
   get_authenticated_endpoint("/catalog/products?#{query}")
@@ -989,6 +1024,20 @@ Então('todos os produtos autenticados devem possuir a disponibilidade comercial
       @authenticated_catalog_commercial_availability
     ),
                                                 "Produto #{index} não respeitou o filtro de disponibilidade comercial"
+  end
+end
+
+Então('todos os produtos autenticados devem possuir o nível de confiança selecionado') do
+  products = @resposta_api.parsed_response.fetch('items')
+
+  products.each_with_index do |product, index|
+    expect(product).to have_key('confidenceLevel'),
+                           "Campo confidenceLevel ausente no produto #{index}"
+
+    expect(product['confidenceLevel']).to eq(
+      @authenticated_catalog_confidence_level
+    ),
+                                      "Produto #{index} não respeitou o filtro de nível de confiança"
   end
 end
 

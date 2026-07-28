@@ -33,3 +33,13 @@ Funcionalidade: Produtos do catálogo autenticado
     E devo validar o contrato dos produtos autenticados retornados
     E todos os produtos autenticados devem possuir a disponibilidade comercial selecionada
     E a resposta autenticada de produtos não deve expor campos administrativos internos
+
+  Cenário: Filtrar produtos por nível de confiança
+    Dado que eu tenha um nível de confiança autenticado existente
+    Quando eu consultar os produtos autenticados desse nível de confiança
+    Então devo receber status code 200
+    E devo validar a paginação da lista autenticada de produtos
+    E a lista autenticada de produtos não deve estar vazia
+    E devo validar o contrato dos produtos autenticados retornados
+    E todos os produtos autenticados devem possuir o nível de confiança selecionado
+    E a resposta autenticada de produtos não deve expor campos administrativos internos
