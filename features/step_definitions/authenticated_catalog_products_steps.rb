@@ -677,8 +677,49 @@ Dado('que eu tenha dados conhecidos de um produto para sugestão autenticada') d
   @authenticated_catalog_suggest_brand_name = selected_product['brand']['name']
 end
 
+Dado('que eu tenha uma marca autenticada com vários produtos disponíveis') do
+  get_authenticated_endpoint('/catalog/brands?hasProducts=true&sort=name')
+
+  expect(@resposta_api.code).to eq(200),
+                                 'Não foi possível consultar as marcas com produtos'
+
+  body = @resposta_api.parsed_response
+
+  expect(body).to be_a(Hash)
+  expect(body['items']).to be_an(Array)
+
+  eligible_brands = body['items'].select do |brand|
+    brand.is_a?(Hash) &&
+      brand['slug'].is_a?(String) &&
+      !brand['slug'].strip.empty? &&
+      brand['productCount'].is_a?(Numeric) &&
+      brand['productCount'] >= 2
+  end
+
+  selected_brand = eligible_brands.max_by do |brand|
+    brand['productCount']
+  end
+
+  expect(selected_brand).not_to be_nil,
+                                'Nenhuma marca com pelo menos dois produtos foi encontrada'
+
+  @authenticated_catalog_product_brand_slug = selected_brand['slug']
+end
+
 Quando('eu consultar os produtos do catálogo autenticado') do
   get_authenticated_endpoint('/catalog/products?page=1&pageSize=10')
+end
+
+Quando('eu consultar os produtos autenticados dessa marca ordenados por nome') do
+  query = URI.encode_www_form(
+    page: 1,
+    pageSize: 10,
+    brandSlug: @authenticated_catalog_product_brand_slug,
+    sort: 'name',
+    direction: 'asc'
+  )
+
+  get_authenticated_endpoint("/catalog/products?#{query}")
 end
 
 Quando('eu consultar o detalhe desse produto autenticado por id') do
@@ -856,6 +897,13 @@ Então('a lista autenticada de produtos não deve estar vazia') do
                           'Nenhum produto foi retornado pelo catálogo autenticado'
 end
 
+Então('a lista autenticada deve possuir pelo menos dois produtos') do
+  products = @resposta_api.parsed_response.fetch('items')
+
+  expect(products.length).to be >= 2,
+                             'A consulta deve retornar pelo menos dois produtos para validar a ordenação'
+end
+
 Então('devo validar o contrato dos produtos autenticados retornados') do
   products = @resposta_api.parsed_response.fetch('items')
 
@@ -865,6 +913,34 @@ Então('devo validar o contrato dos produtos autenticados retornados') do
       "produto #{index}"
     )
   end
+end
+
+Então('todos os produtos autenticados devem pertencer à marca selecionada') do
+  products = @resposta_api.parsed_response.fetch('items')
+
+  products.each_with_index do |product, index|
+    expect(product).to have_key('brand'),
+                           "Campo brand ausente no produto #{index}"
+
+    expect(product['brand']).to be_a(Hash),
+                                  "Campo brand do produto #{index} deve ser um objeto"
+
+    expect(product['brand']['slug']).to eq(
+      @authenticated_catalog_product_brand_slug
+    ),
+                                       "Produto #{index} não pertence à marca filtrada"
+  end
+end
+
+Então('os produtos autenticados devem estar ordenados por nome') do
+  products = @resposta_api.parsed_response.fetch('items')
+
+  names = products.map do |product|
+    product.fetch('name').downcase
+  end
+
+  expect(names).to eq(names.sort),
+                   'Os produtos não estão ordenados por nome em ordem crescente'
 end
 
 Então('o detalhe autenticado deve corresponder ao produto selecionado') do
