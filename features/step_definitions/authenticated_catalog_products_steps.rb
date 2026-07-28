@@ -706,6 +706,31 @@ Dado('que eu tenha uma marca autenticada com vários produtos disponíveis') do
   @authenticated_catalog_product_brand_slug = selected_brand['slug']
 end
 
+Dado('que eu tenha uma disponibilidade comercial autenticada existente') do
+  get_authenticated_endpoint('/catalog/products?page=1&pageSize=10')
+
+  expect(@resposta_api.code).to eq(200),
+                                 'Não foi possível consultar os produtos do catálogo autenticado'
+
+  body = @resposta_api.parsed_response
+
+  expect(body).to be_a(Hash)
+  expect(body['items']).to be_an(Array)
+
+  selected_product = body['items'].find do |product|
+    product.is_a?(Hash) &&
+      authenticated_catalog_product_commercial_availability_values.include?(
+        product['commercialAvailability']
+      )
+  end
+
+  expect(selected_product).not_to be_nil,
+                                  'Nenhum produto com disponibilidade comercial válida foi encontrado'
+
+  @authenticated_catalog_commercial_availability =
+    selected_product['commercialAvailability']
+end
+
 Quando('eu consultar os produtos do catálogo autenticado') do
   get_authenticated_endpoint('/catalog/products?page=1&pageSize=10')
 end
@@ -717,6 +742,16 @@ Quando('eu consultar os produtos autenticados dessa marca ordenados por nome') d
     brandSlug: @authenticated_catalog_product_brand_slug,
     sort: 'name',
     direction: 'asc'
+  )
+
+  get_authenticated_endpoint("/catalog/products?#{query}")
+end
+
+Quando('eu consultar os produtos autenticados dessa disponibilidade comercial') do
+  query = URI.encode_www_form(
+    page: 1,
+    pageSize: 10,
+    commercialAvailability: @authenticated_catalog_commercial_availability
   )
 
   get_authenticated_endpoint("/catalog/products?#{query}")
@@ -941,6 +976,20 @@ Então('os produtos autenticados devem estar ordenados por nome') do
 
   expect(names).to eq(names.sort),
                    'Os produtos não estão ordenados por nome em ordem crescente'
+end
+
+Então('todos os produtos autenticados devem possuir a disponibilidade comercial selecionada') do
+  products = @resposta_api.parsed_response.fetch('items')
+
+  products.each_with_index do |product, index|
+    expect(product).to have_key('commercialAvailability'),
+                           "Campo commercialAvailability ausente no produto #{index}"
+
+    expect(product['commercialAvailability']).to eq(
+      @authenticated_catalog_commercial_availability
+    ),
+                                                "Produto #{index} não respeitou o filtro de disponibilidade comercial"
+  end
 end
 
 Então('o detalhe autenticado deve corresponder ao produto selecionado') do

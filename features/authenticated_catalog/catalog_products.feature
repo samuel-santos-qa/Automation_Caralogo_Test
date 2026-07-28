@@ -23,3 +23,13 @@ Funcionalidade: Produtos do catálogo autenticado
     E todos os produtos autenticados devem pertencer à marca selecionada
     E os produtos autenticados devem estar ordenados por nome
     E a resposta autenticada de produtos não deve expor campos administrativos internos
+
+  Cenário: Filtrar produtos por disponibilidade comercial
+    Dado que eu tenha uma disponibilidade comercial autenticada existente
+    Quando eu consultar os produtos autenticados dessa disponibilidade comercial
+    Então devo receber status code 200
+    E devo validar a paginação da lista autenticada de produtos
+    E a lista autenticada de produtos não deve estar vazia
+    E devo validar o contrato dos produtos autenticados retornados
+    E todos os produtos autenticados devem possuir a disponibilidade comercial selecionada
+    E a resposta autenticada de produtos não deve expor campos administrativos internos
