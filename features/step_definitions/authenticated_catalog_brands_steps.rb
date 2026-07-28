@@ -91,6 +91,12 @@ Quando('eu consultar as marcas do catálogo autenticado') do
   get_authenticated_endpoint('/catalog/brands')
 end
 
+Quando('eu consultar as marcas autenticadas com produtos ordenadas por nome') do
+  get_authenticated_endpoint(
+    '/catalog/brands?hasProducts=true&sort=name'
+  )
+end
+
 Então('devo validar o contrato da lista autenticada de marcas') do
   body = @resposta_api.parsed_response
 
@@ -159,6 +165,32 @@ Então('devo validar o contrato das marcas autenticadas retornadas') do
                                                                          "Campo #{field} da marca #{index} deve ser um date-time válido"
     end
   end
+end
+
+Então('todas as marcas autenticadas retornadas devem possuir produtos') do
+  brands = @resposta_api.parsed_response.fetch('items')
+
+  brands.each_with_index do |brand, index|
+    expect(brand).to have_key('productCount'),
+                         "Campo productCount ausente na marca #{index}"
+
+    expect(brand['productCount']).to be_a(Numeric),
+                                      "Campo productCount da marca #{index} deve ser numérico"
+
+    expect(brand['productCount']).to be > 0,
+                                      "Marca #{index} não deveria ser retornada com hasProducts=true"
+  end
+end
+
+Então('as marcas autenticadas retornadas devem estar ordenadas por nome') do
+  brands = @resposta_api.parsed_response.fetch('items')
+
+  names = brands.map do |brand|
+    brand.fetch('name').downcase
+  end
+
+  expect(names).to eq(names.sort),
+                   'As marcas não estão ordenadas por nome em ordem crescente'
 end
 
 Então('a resposta autenticada de marcas não deve expor campos administrativos internos') do
