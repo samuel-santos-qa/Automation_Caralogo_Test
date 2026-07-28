@@ -52,3 +52,13 @@ Funcionalidade: Produtos do catálogo autenticado
     E devo validar o contrato dos produtos autenticados retornados
     E todos os produtos autenticados retornados devem possuir knot
     E a resposta autenticada de produtos não deve expor campos administrativos internos
+
+  Cenário: Buscar produto autenticado pelo nome
+    Dado que eu tenha um produto autenticado disponível para busca
+    Quando eu buscar os produtos autenticados pelo nome desse produto
+    Então devo receber status code 200
+    E devo validar a paginação da lista autenticada de produtos
+    E a lista autenticada de produtos não deve estar vazia
+    E devo validar o contrato dos produtos autenticados retornados
+    E o produto autenticado selecionado deve aparecer no resultado da busca
+    E a resposta autenticada de produtos não deve expor campos administrativos internos

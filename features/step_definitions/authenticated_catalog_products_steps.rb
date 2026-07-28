@@ -756,6 +756,32 @@ Dado('que eu tenha um nível de confiança autenticado existente') do
     selected_product['confidenceLevel']
 end
 
+Dado('que eu tenha um produto autenticado disponível para busca') do
+  get_authenticated_endpoint('/catalog/products?page=1&pageSize=10')
+
+  expect(@resposta_api.code).to eq(200),
+                                 'Não foi possível consultar os produtos do catálogo autenticado'
+
+  body = @resposta_api.parsed_response
+
+  expect(body).to be_a(Hash)
+  expect(body['items']).to be_an(Array)
+
+  selected_product = body['items'].find do |product|
+    product.is_a?(Hash) &&
+      product['id'].is_a?(String) &&
+      !product['id'].strip.empty? &&
+      product['name'].is_a?(String) &&
+      !product['name'].strip.empty?
+  end
+
+  expect(selected_product).not_to be_nil,
+                                  'Nenhum produto válido foi encontrado para realizar a busca'
+
+  @authenticated_catalog_search_product_id = selected_product['id']
+  @authenticated_catalog_search_term = selected_product['name']
+end
+
 Quando('eu consultar os produtos do catálogo autenticado') do
   get_authenticated_endpoint('/catalog/products?page=1&pageSize=10')
 end
@@ -797,6 +823,16 @@ Quando('eu consultar os produtos autenticados que possuem knot') do
     page: 1,
     pageSize: 10,
     hasKnot: true
+  )
+
+  get_authenticated_endpoint("/catalog/products?#{query}")
+end
+
+Quando('eu buscar os produtos autenticados pelo nome desse produto') do
+  query = URI.encode_www_form(
+    page: 1,
+    pageSize: 10,
+    search: @authenticated_catalog_search_term
   )
 
   get_authenticated_endpoint("/catalog/products?#{query}")
@@ -1060,6 +1096,18 @@ Então('todos os produtos autenticados retornados devem possuir knot') do
     expect(flags.fetch('hasKnot')).to be(true),
                                       "Produto #{index} não respeitou o filtro hasKnot=true"
   end
+end
+
+Então('o produto autenticado selecionado deve aparecer no resultado da busca') do
+  products = @resposta_api.parsed_response.fetch('items')
+
+  selected_product_was_returned = products.any? do |product|
+    product.is_a?(Hash) &&
+      product['id'] == @authenticated_catalog_search_product_id
+  end
+
+  expect(selected_product_was_returned).to be(true),
+                                           'O produto selecionado não apareceu no resultado da busca'
 end
 
 Então('o detalhe autenticado deve corresponder ao produto selecionado') do
