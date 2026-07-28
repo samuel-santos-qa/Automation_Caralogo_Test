@@ -79,6 +79,13 @@ Então('devo validar os dados públicos do item compartilhado') do
   expect(body['rating']).to eq(expected_item.fetch('rating')) if expected_item.key?('rating')
 end
 
+Então('devo validar erro de share revogado') do
+  body = @resposta_api.parsed_response
+
+  expect(body).to be_a(Hash)
+  expect(body['message']).to eq('SHARE_LINK_REVOKED')
+end
+
 Então('devo validar que a resposta contém uma imagem') do
   content_type = @resposta_api.headers['content-type']
 

@@ -25,5 +25,6 @@ Funcionalidade: Share público de item
   Cenário: Consultar item compartilhado com token revogado
     Dado que eu tenha um token revogado de share item configurado
     Quando eu fizer uma requisição GET para o item compartilhado revogado
-    Então devo receber status code 404
+    Então devo receber status code 410
+    E devo validar erro de share revogado
     E a resposta não deve expor campos proibidos
