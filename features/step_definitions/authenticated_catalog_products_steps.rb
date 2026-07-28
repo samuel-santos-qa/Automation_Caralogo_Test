@@ -792,6 +792,16 @@ Quando('eu consultar os produtos autenticados desse nível de confiança') do
   get_authenticated_endpoint("/catalog/products?#{query}")
 end
 
+Quando('eu consultar os produtos autenticados que possuem knot') do
+  query = URI.encode_www_form(
+    page: 1,
+    pageSize: 10,
+    hasKnot: true
+  )
+
+  get_authenticated_endpoint("/catalog/products?#{query}")
+end
+
 Quando('eu consultar o detalhe desse produto autenticado por id') do
   get_authenticated_endpoint(
     "/catalog/products/by-id/#{@authenticated_catalog_product_id}?measurementUnit=inch"
@@ -1038,6 +1048,17 @@ Então('todos os produtos autenticados devem possuir o nível de confiança sele
       @authenticated_catalog_confidence_level
     ),
                                       "Produto #{index} não respeitou o filtro de nível de confiança"
+  end
+end
+
+Então('todos os produtos autenticados retornados devem possuir knot') do
+  products = @resposta_api.parsed_response.fetch('items')
+
+  products.each_with_index do |product, index|
+    flags = product.fetch('flags')
+
+    expect(flags.fetch('hasKnot')).to be(true),
+                                      "Produto #{index} não respeitou o filtro hasKnot=true"
   end
 end
 
