@@ -73,3 +73,13 @@ Funcionalidade: Produtos do catálogo autenticado
     E os totais da paginação autenticada devem permanecer consistentes
     E os produtos da segunda página não devem repetir os da primeira página
     E a resposta autenticada de produtos não deve expor campos administrativos internos
+
+  Cenário: Filtrar produtos por tamanho normalizado
+    Dado que eu tenha um tamanho normalizado autenticado existente
+    Quando eu consultar os produtos autenticados desse tamanho normalizado
+    Então devo receber status code 200
+    E devo validar a paginação da lista autenticada de produtos
+    E a lista autenticada de produtos não deve estar vazia
+    E devo validar o contrato dos produtos autenticados retornados
+    E todos os produtos autenticados devem possuir o tamanho normalizado selecionado
+    E a resposta autenticada de produtos não deve expor campos administrativos internos

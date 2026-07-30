@@ -816,6 +816,32 @@ Dado('que eu tenha a primeira página autenticada de produtos para comparação'
   @authenticated_catalog_first_page_total_pages = body['totalPages']
 end
 
+Dado('que eu tenha um tamanho normalizado autenticado existente') do
+  get_authenticated_endpoint('/catalog/products?page=1&pageSize=10')
+
+  expect(@resposta_api.code).to eq(200),
+                                 'Não foi possível consultar os produtos do catálogo autenticado'
+
+  body = @resposta_api.parsed_response
+
+  expect(body).to be_a(Hash)
+  expect(body['items']).to be_an(Array)
+
+  selected_size = body['items'].filter_map do |product|
+    next unless product.is_a?(Hash)
+    next unless product['sizes'].is_a?(Array)
+
+    product['sizes'].find do |size|
+      size.is_a?(String) && !size.strip.empty?
+    end
+  end.first
+
+  expect(selected_size).not_to be_nil,
+                               'Nenhum tamanho normalizado válido foi encontrado'
+
+  @authenticated_catalog_size_normalized = selected_size
+end
+
 Quando('eu consultar os produtos do catálogo autenticado') do
   get_authenticated_endpoint('/catalog/products?page=1&pageSize=10')
 end
@@ -881,6 +907,16 @@ Quando('eu consultar a segunda página autenticada de produtos') do
   )
 
   @authenticated_catalog_expected_page = 2
+  get_authenticated_endpoint("/catalog/products?#{query}")
+end
+
+Quando('eu consultar os produtos autenticados desse tamanho normalizado') do
+  query = URI.encode_www_form(
+    page: 1,
+    pageSize: 10,
+    sizeNormalized: @authenticated_catalog_size_normalized
+  )
+
   get_authenticated_endpoint("/catalog/products?#{query}")
 end
 
@@ -968,6 +1004,17 @@ Então('os produtos da segunda página não devem repetir os da primeira página
 
   expect(duplicated_ids).to be_empty,
                               'Foram encontrados produtos repetidos entre as páginas'
+end
+
+Então('todos os produtos autenticados devem possuir o tamanho normalizado selecionado') do
+  products = @resposta_api.parsed_response.fetch('items')
+
+  products.each_with_index do |product, index|
+    sizes = product.fetch('sizes')
+
+    expect(sizes).to include(@authenticated_catalog_size_normalized),
+                     "Produto #{index} não respeitou o filtro sizeNormalized"
+  end
 end
 
 Então('devo validar o resumo da lista autenticada de produtos') do
