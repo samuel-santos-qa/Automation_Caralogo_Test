@@ -62,3 +62,14 @@ Funcionalidade: Produtos do catálogo autenticado
     E devo validar o contrato dos produtos autenticados retornados
     E o produto autenticado selecionado deve aparecer no resultado da busca
     E a resposta autenticada de produtos não deve expor campos administrativos internos
+
+  Cenário: Navegar para a segunda página de produtos autenticados
+    Dado que eu tenha a primeira página autenticada de produtos para comparação
+    Quando eu consultar a segunda página autenticada de produtos
+    Então devo receber status code 200
+    E devo validar a paginação da lista autenticada de produtos
+    E a lista autenticada de produtos não deve estar vazia
+    E devo validar o contrato dos produtos autenticados retornados
+    E os totais da paginação autenticada devem permanecer consistentes
+    E os produtos da segunda página não devem repetir os da primeira página
+    E a resposta autenticada de produtos não deve expor campos administrativos internos

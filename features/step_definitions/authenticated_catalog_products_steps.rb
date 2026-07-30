@@ -782,6 +782,40 @@ Dado('que eu tenha um produto autenticado disponível para busca') do
   @authenticated_catalog_search_term = selected_product['name']
 end
 
+Dado('que eu tenha a primeira página autenticada de produtos para comparação') do
+  query = URI.encode_www_form(
+    page: 1,
+    pageSize: 10,
+    sort: 'name',
+    direction: 'asc'
+  )
+
+  get_authenticated_endpoint("/catalog/products?#{query}")
+
+  expect(@resposta_api.code).to eq(200),
+                                 'Não foi possível consultar a primeira página de produtos'
+
+  body = @resposta_api.parsed_response
+
+  expect(body).to be_a(Hash)
+  expect(body['items']).to be_an(Array)
+  expect(body['items']).not_to be_empty
+
+  expect(body['totalItems']).to be_a(Integer)
+  expect(body['totalPages']).to be_a(Integer)
+  expect(body['totalItems']).to be > 10,
+                                  'Não existem produtos suficientes para validar a segunda página'
+  expect(body['totalPages']).to be >= 2,
+                                  'A resposta não possui uma segunda página disponível'
+
+  @authenticated_catalog_first_page_product_ids = body['items'].map do |product|
+    product.fetch('id')
+  end
+
+  @authenticated_catalog_first_page_total_items = body['totalItems']
+  @authenticated_catalog_first_page_total_pages = body['totalPages']
+end
+
 Quando('eu consultar os produtos do catálogo autenticado') do
   get_authenticated_endpoint('/catalog/products?page=1&pageSize=10')
 end
@@ -838,6 +872,18 @@ Quando('eu buscar os produtos autenticados pelo nome desse produto') do
   get_authenticated_endpoint("/catalog/products?#{query}")
 end
 
+Quando('eu consultar a segunda página autenticada de produtos') do
+  query = URI.encode_www_form(
+    page: 2,
+    pageSize: 10,
+    sort: 'name',
+    direction: 'asc'
+  )
+
+  @authenticated_catalog_expected_page = 2
+  get_authenticated_endpoint("/catalog/products?#{query}")
+end
+
 Quando('eu consultar o detalhe desse produto autenticado por id') do
   get_authenticated_endpoint(
     "/catalog/products/by-id/#{@authenticated_catalog_product_id}?measurementUnit=inch"
@@ -873,6 +919,7 @@ end
 
 Então('devo validar a paginação da lista autenticada de produtos') do
   body = @resposta_api.parsed_response
+  expected_page = @authenticated_catalog_expected_page || 1
 
   expect(body).to be_a(Hash)
 
@@ -882,7 +929,7 @@ Então('devo validar a paginação da lista autenticada de produtos') do
   end
 
   expect(body['page']).to be_a(Integer)
-  expect(body['page']).to eq(1)
+  expect(body['page']).to eq(expected_page)
 
   expect(body['pageSize']).to be_a(Integer)
   expect(body['pageSize']).to eq(10)
@@ -895,6 +942,32 @@ Então('devo validar a paginação da lista autenticada de produtos') do
 
   expect(body['items']).to be_an(Array)
   expect(body['items'].length).to be <= body['pageSize']
+end
+
+Então('os totais da paginação autenticada devem permanecer consistentes') do
+  body = @resposta_api.parsed_response
+
+  expect(body.fetch('totalItems')).to eq(
+    @authenticated_catalog_first_page_total_items
+  ),
+                                       'totalItems mudou entre a primeira e a segunda página'
+
+  expect(body.fetch('totalPages')).to eq(
+    @authenticated_catalog_first_page_total_pages
+  ),
+                                       'totalPages mudou entre a primeira e a segunda página'
+end
+
+Então('os produtos da segunda página não devem repetir os da primeira página') do
+  second_page_ids = @resposta_api.parsed_response.fetch('items').map do |product|
+    product.fetch('id')
+  end
+
+  duplicated_ids =
+    @authenticated_catalog_first_page_product_ids & second_page_ids
+
+  expect(duplicated_ids).to be_empty,
+                              'Foram encontrados produtos repetidos entre as páginas'
 end
 
 Então('devo validar o resumo da lista autenticada de produtos') do
