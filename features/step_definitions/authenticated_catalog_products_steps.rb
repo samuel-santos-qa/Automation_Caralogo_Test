@@ -677,8 +677,247 @@ Dado('que eu tenha dados conhecidos de um produto para sugestão autenticada') d
   @authenticated_catalog_suggest_brand_name = selected_product['brand']['name']
 end
 
+Dado('que eu tenha uma marca autenticada com vários produtos disponíveis') do
+  get_authenticated_endpoint('/catalog/brands?hasProducts=true&sort=name')
+
+  expect(@resposta_api.code).to eq(200),
+                                 'Não foi possível consultar as marcas com produtos'
+
+  body = @resposta_api.parsed_response
+
+  expect(body).to be_a(Hash)
+  expect(body['items']).to be_an(Array)
+
+  eligible_brands = body['items'].select do |brand|
+    brand.is_a?(Hash) &&
+      brand['slug'].is_a?(String) &&
+      !brand['slug'].strip.empty? &&
+      brand['productCount'].is_a?(Numeric) &&
+      brand['productCount'] >= 2
+  end
+
+  selected_brand = eligible_brands.max_by do |brand|
+    brand['productCount']
+  end
+
+  expect(selected_brand).not_to be_nil,
+                                'Nenhuma marca com pelo menos dois produtos foi encontrada'
+
+  @authenticated_catalog_product_brand_slug = selected_brand['slug']
+end
+
+Dado('que eu tenha uma disponibilidade comercial autenticada existente') do
+  get_authenticated_endpoint('/catalog/products?page=1&pageSize=10')
+
+  expect(@resposta_api.code).to eq(200),
+                                 'Não foi possível consultar os produtos do catálogo autenticado'
+
+  body = @resposta_api.parsed_response
+
+  expect(body).to be_a(Hash)
+  expect(body['items']).to be_an(Array)
+
+  selected_product = body['items'].find do |product|
+    product.is_a?(Hash) &&
+      authenticated_catalog_product_commercial_availability_values.include?(
+        product['commercialAvailability']
+      )
+  end
+
+  expect(selected_product).not_to be_nil,
+                                  'Nenhum produto com disponibilidade comercial válida foi encontrado'
+
+  @authenticated_catalog_commercial_availability =
+    selected_product['commercialAvailability']
+end
+
+Dado('que eu tenha um nível de confiança autenticado existente') do
+  get_authenticated_endpoint('/catalog/products?page=1&pageSize=10')
+
+  expect(@resposta_api.code).to eq(200),
+                                 'Não foi possível consultar os produtos do catálogo autenticado'
+
+  body = @resposta_api.parsed_response
+
+  expect(body).to be_a(Hash)
+  expect(body['items']).to be_an(Array)
+
+  selected_product = body['items'].find do |product|
+    product.is_a?(Hash) &&
+      authenticated_catalog_product_confidence_level_values.include?(
+        product['confidenceLevel']
+      )
+  end
+
+  expect(selected_product).not_to be_nil,
+                                  'Nenhum produto com nível de confiança válido foi encontrado'
+
+  @authenticated_catalog_confidence_level =
+    selected_product['confidenceLevel']
+end
+
+Dado('que eu tenha um produto autenticado disponível para busca') do
+  get_authenticated_endpoint('/catalog/products?page=1&pageSize=10')
+
+  expect(@resposta_api.code).to eq(200),
+                                 'Não foi possível consultar os produtos do catálogo autenticado'
+
+  body = @resposta_api.parsed_response
+
+  expect(body).to be_a(Hash)
+  expect(body['items']).to be_an(Array)
+
+  selected_product = body['items'].find do |product|
+    product.is_a?(Hash) &&
+      product['id'].is_a?(String) &&
+      !product['id'].strip.empty? &&
+      product['name'].is_a?(String) &&
+      !product['name'].strip.empty?
+  end
+
+  expect(selected_product).not_to be_nil,
+                                  'Nenhum produto válido foi encontrado para realizar a busca'
+
+  @authenticated_catalog_search_product_id = selected_product['id']
+  @authenticated_catalog_search_term = selected_product['name']
+end
+
+Dado('que eu tenha a primeira página autenticada de produtos para comparação') do
+  query = URI.encode_www_form(
+    page: 1,
+    pageSize: 10,
+    sort: 'name',
+    direction: 'asc'
+  )
+
+  get_authenticated_endpoint("/catalog/products?#{query}")
+
+  expect(@resposta_api.code).to eq(200),
+                                 'Não foi possível consultar a primeira página de produtos'
+
+  body = @resposta_api.parsed_response
+
+  expect(body).to be_a(Hash)
+  expect(body['items']).to be_an(Array)
+  expect(body['items']).not_to be_empty
+
+  expect(body['totalItems']).to be_a(Integer)
+  expect(body['totalPages']).to be_a(Integer)
+  expect(body['totalItems']).to be > 10,
+                                  'Não existem produtos suficientes para validar a segunda página'
+  expect(body['totalPages']).to be >= 2,
+                                  'A resposta não possui uma segunda página disponível'
+
+  @authenticated_catalog_first_page_product_ids = body['items'].map do |product|
+    product.fetch('id')
+  end
+
+  @authenticated_catalog_first_page_total_items = body['totalItems']
+  @authenticated_catalog_first_page_total_pages = body['totalPages']
+end
+
+Dado('que eu tenha um tamanho normalizado autenticado existente') do
+  get_authenticated_endpoint('/catalog/products?page=1&pageSize=10')
+
+  expect(@resposta_api.code).to eq(200),
+                                 'Não foi possível consultar os produtos do catálogo autenticado'
+
+  body = @resposta_api.parsed_response
+
+  expect(body).to be_a(Hash)
+  expect(body['items']).to be_an(Array)
+
+  selected_size = body['items'].filter_map do |product|
+    next unless product.is_a?(Hash)
+    next unless product['sizes'].is_a?(Array)
+
+    product['sizes'].find do |size|
+      size.is_a?(String) && !size.strip.empty?
+    end
+  end.first
+
+  expect(selected_size).not_to be_nil,
+                               'Nenhum tamanho normalizado válido foi encontrado'
+
+  @authenticated_catalog_size_normalized = selected_size
+end
+
 Quando('eu consultar os produtos do catálogo autenticado') do
   get_authenticated_endpoint('/catalog/products?page=1&pageSize=10')
+end
+
+Quando('eu consultar os produtos autenticados dessa marca ordenados por nome') do
+  query = URI.encode_www_form(
+    page: 1,
+    pageSize: 10,
+    brandSlug: @authenticated_catalog_product_brand_slug,
+    sort: 'name',
+    direction: 'asc'
+  )
+
+  get_authenticated_endpoint("/catalog/products?#{query}")
+end
+
+Quando('eu consultar os produtos autenticados dessa disponibilidade comercial') do
+  query = URI.encode_www_form(
+    page: 1,
+    pageSize: 10,
+    commercialAvailability: @authenticated_catalog_commercial_availability
+  )
+
+  get_authenticated_endpoint("/catalog/products?#{query}")
+end
+
+Quando('eu consultar os produtos autenticados desse nível de confiança') do
+  query = URI.encode_www_form(
+    page: 1,
+    pageSize: 10,
+    confidenceLevel: @authenticated_catalog_confidence_level
+  )
+
+  get_authenticated_endpoint("/catalog/products?#{query}")
+end
+
+Quando('eu consultar os produtos autenticados que possuem knot') do
+  query = URI.encode_www_form(
+    page: 1,
+    pageSize: 10,
+    hasKnot: true
+  )
+
+  get_authenticated_endpoint("/catalog/products?#{query}")
+end
+
+Quando('eu buscar os produtos autenticados pelo nome desse produto') do
+  query = URI.encode_www_form(
+    page: 1,
+    pageSize: 10,
+    search: @authenticated_catalog_search_term
+  )
+
+  get_authenticated_endpoint("/catalog/products?#{query}")
+end
+
+Quando('eu consultar a segunda página autenticada de produtos') do
+  query = URI.encode_www_form(
+    page: 2,
+    pageSize: 10,
+    sort: 'name',
+    direction: 'asc'
+  )
+
+  @authenticated_catalog_expected_page = 2
+  get_authenticated_endpoint("/catalog/products?#{query}")
+end
+
+Quando('eu consultar os produtos autenticados desse tamanho normalizado') do
+  query = URI.encode_www_form(
+    page: 1,
+    pageSize: 10,
+    sizeNormalized: @authenticated_catalog_size_normalized
+  )
+
+  get_authenticated_endpoint("/catalog/products?#{query}")
 end
 
 Quando('eu consultar o detalhe desse produto autenticado por id') do
@@ -716,6 +955,7 @@ end
 
 Então('devo validar a paginação da lista autenticada de produtos') do
   body = @resposta_api.parsed_response
+  expected_page = @authenticated_catalog_expected_page || 1
 
   expect(body).to be_a(Hash)
 
@@ -725,7 +965,7 @@ Então('devo validar a paginação da lista autenticada de produtos') do
   end
 
   expect(body['page']).to be_a(Integer)
-  expect(body['page']).to eq(1)
+  expect(body['page']).to eq(expected_page)
 
   expect(body['pageSize']).to be_a(Integer)
   expect(body['pageSize']).to eq(10)
@@ -738,6 +978,43 @@ Então('devo validar a paginação da lista autenticada de produtos') do
 
   expect(body['items']).to be_an(Array)
   expect(body['items'].length).to be <= body['pageSize']
+end
+
+Então('os totais da paginação autenticada devem permanecer consistentes') do
+  body = @resposta_api.parsed_response
+
+  expect(body.fetch('totalItems')).to eq(
+    @authenticated_catalog_first_page_total_items
+  ),
+                                       'totalItems mudou entre a primeira e a segunda página'
+
+  expect(body.fetch('totalPages')).to eq(
+    @authenticated_catalog_first_page_total_pages
+  ),
+                                       'totalPages mudou entre a primeira e a segunda página'
+end
+
+Então('os produtos da segunda página não devem repetir os da primeira página') do
+  second_page_ids = @resposta_api.parsed_response.fetch('items').map do |product|
+    product.fetch('id')
+  end
+
+  duplicated_ids =
+    @authenticated_catalog_first_page_product_ids & second_page_ids
+
+  expect(duplicated_ids).to be_empty,
+                              'Foram encontrados produtos repetidos entre as páginas'
+end
+
+Então('todos os produtos autenticados devem possuir o tamanho normalizado selecionado') do
+  products = @resposta_api.parsed_response.fetch('items')
+
+  products.each_with_index do |product, index|
+    sizes = product.fetch('sizes')
+
+    expect(sizes).to include(@authenticated_catalog_size_normalized),
+                     "Produto #{index} não respeitou o filtro sizeNormalized"
+  end
 end
 
 Então('devo validar o resumo da lista autenticada de produtos') do
@@ -856,6 +1133,13 @@ Então('a lista autenticada de produtos não deve estar vazia') do
                           'Nenhum produto foi retornado pelo catálogo autenticado'
 end
 
+Então('a lista autenticada deve possuir pelo menos dois produtos') do
+  products = @resposta_api.parsed_response.fetch('items')
+
+  expect(products.length).to be >= 2,
+                             'A consulta deve retornar pelo menos dois produtos para validar a ordenação'
+end
+
 Então('devo validar o contrato dos produtos autenticados retornados') do
   products = @resposta_api.parsed_response.fetch('items')
 
@@ -865,6 +1149,85 @@ Então('devo validar o contrato dos produtos autenticados retornados') do
       "produto #{index}"
     )
   end
+end
+
+Então('todos os produtos autenticados devem pertencer à marca selecionada') do
+  products = @resposta_api.parsed_response.fetch('items')
+
+  products.each_with_index do |product, index|
+    expect(product).to have_key('brand'),
+                           "Campo brand ausente no produto #{index}"
+
+    expect(product['brand']).to be_a(Hash),
+                                  "Campo brand do produto #{index} deve ser um objeto"
+
+    expect(product['brand']['slug']).to eq(
+      @authenticated_catalog_product_brand_slug
+    ),
+                                       "Produto #{index} não pertence à marca filtrada"
+  end
+end
+
+Então('os produtos autenticados devem estar ordenados por nome') do
+  products = @resposta_api.parsed_response.fetch('items')
+
+  names = products.map do |product|
+    product.fetch('name').downcase
+  end
+
+  expect(names).to eq(names.sort),
+                   'Os produtos não estão ordenados por nome em ordem crescente'
+end
+
+Então('todos os produtos autenticados devem possuir a disponibilidade comercial selecionada') do
+  products = @resposta_api.parsed_response.fetch('items')
+
+  products.each_with_index do |product, index|
+    expect(product).to have_key('commercialAvailability'),
+                           "Campo commercialAvailability ausente no produto #{index}"
+
+    expect(product['commercialAvailability']).to eq(
+      @authenticated_catalog_commercial_availability
+    ),
+                                                "Produto #{index} não respeitou o filtro de disponibilidade comercial"
+  end
+end
+
+Então('todos os produtos autenticados devem possuir o nível de confiança selecionado') do
+  products = @resposta_api.parsed_response.fetch('items')
+
+  products.each_with_index do |product, index|
+    expect(product).to have_key('confidenceLevel'),
+                           "Campo confidenceLevel ausente no produto #{index}"
+
+    expect(product['confidenceLevel']).to eq(
+      @authenticated_catalog_confidence_level
+    ),
+                                      "Produto #{index} não respeitou o filtro de nível de confiança"
+  end
+end
+
+Então('todos os produtos autenticados retornados devem possuir knot') do
+  products = @resposta_api.parsed_response.fetch('items')
+
+  products.each_with_index do |product, index|
+    flags = product.fetch('flags')
+
+    expect(flags.fetch('hasKnot')).to be(true),
+                                      "Produto #{index} não respeitou o filtro hasKnot=true"
+  end
+end
+
+Então('o produto autenticado selecionado deve aparecer no resultado da busca') do
+  products = @resposta_api.parsed_response.fetch('items')
+
+  selected_product_was_returned = products.any? do |product|
+    product.is_a?(Hash) &&
+      product['id'] == @authenticated_catalog_search_product_id
+  end
+
+  expect(selected_product_was_returned).to be(true),
+                                           'O produto selecionado não apareceu no resultado da busca'
 end
 
 Então('o detalhe autenticado deve corresponder ao produto selecionado') do
